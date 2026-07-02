@@ -74,9 +74,8 @@ function MapInner({ setActiveItem }) {
  *
  * @param {object}   props
  * @param {function} [props.setActiveItem] — Callback to activate the right panel
- * @param {string}   [props.theme]         — Current application theme ("light" | "dark")
  */
-export function MapContainer({ setActiveItem, theme = "light" }) {
+export function MapContainer({ setActiveItem }) {
   return (
     <div
       className={`relative flex-1 h-full overflow-hidden select-none ${zIndex.cards}`}
@@ -84,7 +83,7 @@ export function MapContainer({ setActiveItem, theme = "light" }) {
       role="region"
     >
       {/* MapProvider owns the map DOM mount point and the MapLibre lifecycle */}
-      <MapProvider theme={theme}>
+      <MapProvider>
         <MapInner setActiveItem={setActiveItem} />
       </MapProvider>
     </div>

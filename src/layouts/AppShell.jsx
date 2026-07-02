@@ -53,7 +53,7 @@ export function AppShell({ children }) {
 
       {/* Main Layout Area */}
       <div className="flex-1 flex flex-row h-full overflow-hidden relative">
-        
+
         {/* Collapsible Left Sidebar */}
         <Sidebar
           activeSection={activeSection}
@@ -63,7 +63,7 @@ export function AppShell({ children }) {
 
         {/* Central Map Workspace */}
         <main className="flex-1 h-full relative overflow-hidden flex flex-col">
-          <MapContainer setActiveItem={handleSelectActiveItem} theme={theme} />
+          <MapContainer setActiveItem={handleSelectActiveItem} />
           {children}
         </main>
 
@@ -74,7 +74,7 @@ export function AppShell({ children }) {
           isRightPanelOpen={isRightPanelOpen}
           setRightPanelOpen={setRightPanelOpen}
         />
-        
+
       </div>
     </div>
   );
