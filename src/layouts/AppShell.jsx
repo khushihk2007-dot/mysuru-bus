@@ -63,7 +63,7 @@ export function AppShell({ children }) {
 
         {/* Central Map Workspace */}
         <main className="flex-1 h-full relative overflow-hidden flex flex-col">
-          <MapContainer setActiveItem={handleSelectActiveItem} />
+          <MapContainer setActiveItem={handleSelectActiveItem} theme={theme} />
           {children}
         </main>
 
