@@ -46,9 +46,13 @@ export function useMapControls() {
     map.on("rotate", onRotate);
     map.on("zoom", onZoom);
 
-    // seed with current values
-    setBearing(map.getBearing());
-    setZoom(map.getZoom());
+    // seed with current values asynchronously to avoid synchronous cascading renders
+    Promise.resolve().then(() => {
+      if (map) {
+        setBearing(map.getBearing());
+        setZoom(map.getZoom());
+      }
+    });
 
     return () => {
       map.off("rotate", onRotate);

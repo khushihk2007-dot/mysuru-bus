@@ -1,29 +1,25 @@
 /**
  * @file MapLayers.jsx
- * @description Layer switcher placeholder control.
- * Provides the UI shell for switching base layers and toggling overlays.
- * No real layer data is loaded in this phase — architectural stub only.
+ * @description Layer switcher control in the map HUD.
+ * Provides toggles for base layers (light/dark minimal styles) and transit overlays (routes, stops, labels).
  */
 
 "use client";
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Layers, Map, Globe, X } from "lucide-react";
+import { Layers, Map, Globe, X, Eye, EyeOff, Sliders } from "lucide-react";
 import { useMapLayers } from "../hooks/useMapLayers";
+import { useTransit } from "@/features/transit/context/TransitContext";
 
 const BASE_LAYERS = [
-  { id: "osm",       label: "Street",    icon: Map },
-  { id: "satellite", label: "Satellite", icon: Globe },
+  { id: "osm",       label: "Street Mode",    icon: Map },
 ];
 
-/**
- * MapLayers
- * A popover-style layer switcher button.
- */
 export function MapLayers({ className = "" }) {
   const { layers, setBaseLayer } = useMapLayers();
   const [isOpen, setIsOpen] = useState(false);
+  const transit = useTransit();
 
   return (
     <div className={`relative ${className}`}>
@@ -47,7 +43,7 @@ export function MapLayers({ className = "" }) {
         <Layers className="w-4 h-4" aria-hidden="true" />
       </button>
 
-      {/* Popover */}
+      {/* Popover panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -57,55 +53,85 @@ export function MapLayers({ className = "" }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.97 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 bottom-full mb-2 w-40 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-30"
+            className="absolute right-0 bottom-full mb-2 w-56 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-30 select-none"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                Base Layer
+              <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                Map Layers
               </span>
               <button
                 onClick={() => setIsOpen(false)}
                 className="text-text-muted hover:text-text-primary transition-colors"
                 aria-label="Close layer switcher"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Layer options */}
-            <div className="p-1.5 flex flex-col gap-0.5">
-              {BASE_LAYERS.map(({ id, label, icon: Icon }) => {
-                const active = layers.baseLayer === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => { setBaseLayer(id); setIsOpen(false); }}
-                    className={`
-                      flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs text-left
-                      transition-colors duration-100
-                      ${active
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-text-secondary hover:bg-secondary hover:text-text-primary"
-                      }
-                    `}
-                    aria-pressed={active}
-                  >
-                    <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                    {label}
-                    {active && (
-                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
-                    )}
-                  </button>
-                );
-              })}
+            {/* Base Style Info */}
+            <div className="p-2 flex flex-col gap-1">
+              <span className="text-[9px] uppercase tracking-wider text-text-muted px-1">
+                Base style
+              </span>
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/40 text-xs font-medium text-foreground">
+                <Map className="w-3.5 h-3.5 text-primary" />
+                Muted CartoDB Basemap
+              </div>
             </div>
 
-            {/* Coming soon notice */}
-            <div className="px-3 py-2 border-t border-border bg-surface/50">
-              <p className="text-[9px] text-text-muted">
-                Satellite &amp; traffic layers coming soon
-              </p>
+            {/* Transit Overlays */}
+            <div className="border-t border-border p-2 flex flex-col gap-2">
+              <span className="text-[9px] uppercase tracking-wider text-text-muted px-1">
+                Transit overlays
+              </span>
+
+              <div className="flex flex-col gap-1 text-xs">
+                {/* Routes Toggle */}
+                <div className="flex items-center justify-between px-1 py-1 rounded hover:bg-muted/40">
+                  <span className="text-text-secondary">Route Lines</span>
+                  <button
+                    onClick={() => transit.toggleLayerVisibility("routes")}
+                    className={`p-1 rounded hover:bg-muted ${transit.layerVisibility.routes ? "text-primary" : "text-text-muted"}`}
+                    aria-label={transit.layerVisibility.routes ? "Hide routes" : "Show routes"}
+                  >
+                    {transit.layerVisibility.routes ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                {/* Stops Toggle */}
+                <div className="flex items-center justify-between px-1 py-1 rounded hover:bg-muted/40">
+                  <span className="text-text-secondary">Station Stops</span>
+                  <button
+                    onClick={() => transit.toggleLayerVisibility("stops")}
+                    className={`p-1 rounded hover:bg-muted ${transit.layerVisibility.stops ? "text-primary" : "text-text-muted"}`}
+                    aria-label={transit.layerVisibility.stops ? "Hide stops" : "Show stops"}
+                  >
+                    {transit.layerVisibility.stops ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                {/* Labels Toggle */}
+                <div className="flex items-center justify-between px-1 py-1 rounded hover:bg-muted/40">
+                  <span className="text-text-secondary">Stop Labels</span>
+                  <button
+                    disabled={!transit.layerVisibility.stops}
+                    onClick={() => transit.toggleLayerVisibility("labels")}
+                    className={`p-1 rounded hover:bg-muted disabled:opacity-40 ${transit.layerVisibility.labels && transit.layerVisibility.stops ? "text-primary" : "text-text-muted"}`}
+                    aria-label={transit.layerVisibility.labels ? "Hide labels" : "Show labels"}
+                  >
+                    {transit.layerVisibility.labels && transit.layerVisibility.stops ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Tip notice */}
+            <div className="px-3 py-2 border-t border-border bg-surface/50 text-center">
+              <span className="text-[9px] text-text-muted flex items-center justify-center gap-1">
+                <Sliders className="w-2.5 h-2.5" />
+                Change opacity in GIS settings panel
+              </span>
             </div>
           </motion.div>
         )}

@@ -4,7 +4,7 @@ import { SidebarSection } from "./SidebarSection";
 import { zIndex } from "@/design/zIndex";
 import { shadows } from "@/design/shadows";
 
-export function Sidebar({ activeSection, isSidebarOpen, setSidebarOpen }) {
+export function Sidebar({ activeSection, isSidebarOpen, setSidebarOpen, onSelectStop }) {
   // If activeSection is 'map', we should close the sidebar contextually or keep it hidden.
   const isHidden = !isSidebarOpen || activeSection === "map";
 
@@ -19,7 +19,7 @@ export function Sidebar({ activeSection, isSidebarOpen, setSidebarOpen }) {
         <div className="flex-1 flex flex-col h-full p-5 overflow-hidden">
           {/* Scrollable Container for Sidebar Modules */}
           <div className="flex-1 overflow-y-auto pr-1">
-            <SidebarSection activeSection={activeSection} />
+            <SidebarSection activeSection={activeSection} onSelectStop={onSelectStop} />
           </div>
         </div>
 
@@ -55,7 +55,7 @@ export function Sidebar({ activeSection, isSidebarOpen, setSidebarOpen }) {
           </div>
 
           <div className="flex-1 overflow-y-auto px-5 pb-6">
-            <SidebarSection activeSection={activeSection} />
+            <SidebarSection activeSection={activeSection} onSelectStop={onSelectStop} />
           </div>
         </div>
       )}

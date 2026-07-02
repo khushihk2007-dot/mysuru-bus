@@ -1,3 +1,8 @@
+/**
+ * @file AppShell.jsx
+ * @description Main app shell layout, wrapped in TransitProvider to share transit data.
+ */
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -5,6 +10,7 @@ import { NavigationRail } from "@/shared/components/layout/NavigationRail";
 import { Sidebar } from "@/shared/components/layout/Sidebar";
 import { RightPanel } from "@/shared/components/layout/RightPanel";
 import { MapContainer } from "@/features/map/components/MapContainer";
+import { TransitProvider } from "@/features/transit/context/TransitContext";
 import { zIndex } from "@/design/zIndex";
 import { colors } from "@/design/colors";
 
@@ -40,43 +46,46 @@ export function AppShell({ children }) {
   }, [theme]);
 
   return (
-    <div className={`flex h-screen w-screen overflow-hidden ${colors.background} ${theme}`}>
-      {/* Left Navigation Rail (Desktop/Tablet) or Bottom Nav (Mobile) */}
-      <NavigationRail
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        theme={theme}
-        toggleTheme={toggleTheme}
-        isSidebarOpen={isSidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-      />
-
-      {/* Main Layout Area */}
-      <div className="flex-1 flex flex-row h-full overflow-hidden relative">
-
-        {/* Collapsible Left Sidebar */}
-        <Sidebar
+    <TransitProvider>
+      <div className={`flex h-screen w-screen overflow-hidden ${colors.background} ${theme}`}>
+        {/* Left Navigation Rail (Desktop/Tablet) or Bottom Nav (Mobile) */}
+        <NavigationRail
           activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          theme={theme}
+          toggleTheme={toggleTheme}
           isSidebarOpen={isSidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
 
-        {/* Central Map Workspace */}
-        <main className="flex-1 h-full relative overflow-hidden flex flex-col">
-          <MapContainer setActiveItem={handleSelectActiveItem} />
-          {children}
-        </main>
+        {/* Main Layout Area */}
+        <div className="flex-1 flex flex-row h-full overflow-hidden relative">
+          
+          {/* Collapsible Left Sidebar */}
+          <Sidebar
+            activeSection={activeSection}
+            isSidebarOpen={isSidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            onSelectStop={handleSelectActiveItem}
+          />
 
-        {/* Right Details Panel */}
-        <RightPanel
-          activeItem={activeItem}
-          setActiveItem={handleSelectActiveItem}
-          isRightPanelOpen={isRightPanelOpen}
-          setRightPanelOpen={setRightPanelOpen}
-        />
+          {/* Central Map Workspace */}
+          <main className="flex-1 h-full relative overflow-hidden flex flex-col">
+            <MapContainer setActiveItem={handleSelectActiveItem} theme={theme} />
+            {children}
+          </main>
 
+          {/* Right Details Panel */}
+          <RightPanel
+            activeItem={activeItem}
+            setActiveItem={handleSelectActiveItem}
+            isRightPanelOpen={isRightPanelOpen}
+            setRightPanelOpen={setRightPanelOpen}
+          />
+          
+        </div>
       </div>
-    </div>
+    </TransitProvider>
   );
 }
 

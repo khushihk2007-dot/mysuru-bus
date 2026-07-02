@@ -34,6 +34,7 @@ export function MapProvider({ children, theme = "light", mapOptions = {} }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
 
+  const [mapInstance, setMapInstance] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState(null);
@@ -69,6 +70,7 @@ export function MapProvider({ children, theme = "light", mapOptions = {} }) {
         });
 
         mapRef.current = map;
+        setMapInstance(map);
 
         // ── Map ready states ────────────────────────────────────────────
         map.once("load", () => {
@@ -111,6 +113,7 @@ export function MapProvider({ children, theme = "light", mapOptions = {} }) {
         mapRef.current.remove();
         mapRef.current = null;
       }
+      setMapInstance(null);
       setIsLoaded(false);
       setIsReady(false);
     };
@@ -119,30 +122,31 @@ export function MapProvider({ children, theme = "light", mapOptions = {} }) {
 
   // ── Dynamic Theme/Style switching ───────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !isLoaded) return;
+    if (!mapInstance || !isLoaded) return;
     const targetStyle = theme === "dark" ? CARTO_DARK_STYLE : CARTO_LIGHT_STYLE;
-    mapRef.current.setStyle(targetStyle);
-  }, [theme, isLoaded]);
+    mapInstance.setStyle(targetStyle);
+  }, [theme, isLoaded, mapInstance]);
 
   // ── Window resize support ────────────────────────────────────────────────
   useEffect(() => {
+    if (!mapInstance) return;
     const handleResize = () => {
-      mapRef.current?.resize();
+      mapInstance.resize();
     };
     window.addEventListener("resize", handleResize, { passive: true });
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [mapInstance]);
 
   // ── Stable context value (prevent consumer re-renders) ────────────────────
   const contextValue = useMemo(
     () => ({
-      map: mapRef.current,
+      map: mapInstance,
       isLoaded,
       isReady,
       error,
       mapContainer: containerRef,
     }),
-    [isLoaded, isReady, error]
+    [mapInstance, isLoaded, isReady, error]
   );
 
   return (
@@ -154,7 +158,6 @@ export function MapProvider({ children, theme = "light", mapOptions = {} }) {
         aria-hidden="true"
         data-testid="maplibre-container"
       />
-      {/* Consumer overlay tree renders on top */}
       {children}
     </MapContext.Provider>
   );

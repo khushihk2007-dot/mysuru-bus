@@ -1,19 +1,7 @@
 /**
- * @file MapContainer.jsx  (production implementation)
+ * @file MapContainer.jsx
  * @description Root map component consumed by AppShell.
- *
- * Structure:
- *   <div> (relative, flex-1, h-full)
- *     <MapProvider>           — owns the MapLibre canvas (absolute inset-0)
- *       <div> (absolute inset-0, overlay root)
- *         <FloatingSearch />
- *         <MapView />         — overlay controls + HUD
- *         <MapLoading />      — fade-out once ready
- *         <MapError />        — shown on failure
- *         <BottomActivityBar />
- *       </div>
- *     </MapProvider>
- *   </div>
+ * Wire up the GIS Transit layers to render polylines and stops dynamically.
  */
 
 "use client";
@@ -25,6 +13,7 @@ import { MapLoading } from "./MapLoading";
 import { MapError } from "./MapError";
 import { FloatingSearch } from "@/shared/components/layout/FloatingSearch";
 import { BottomActivityBar } from "@/shared/components/layout/BottomActivityBar";
+import { TransitLayers } from "@/features/transit/components/TransitLayers";
 import { useMapContext } from "../context/MapContext";
 import { zIndex } from "@/design/zIndex";
 
@@ -33,7 +22,7 @@ import { zIndex } from "@/design/zIndex";
  * Renders in an absolute-positioned div so overlay children can position
  * themselves relative to the full map canvas area.
  */
-function MapInner({ setActiveItem }) {
+function MapInner({ setActiveItem, theme = "light" }) {
   const { isReady, error } = useMapContext();
 
   return (
@@ -46,6 +35,11 @@ function MapInner({ setActiveItem }) {
 
       {/* MapView: overlay controls + HUD (handles its own pointer-events) */}
       <MapView />
+
+      {/* Transit Map Layers (Polylines, stops, and selection rings) */}
+      {isReady && !error && (
+        <TransitLayers theme={theme} onSelectStop={setActiveItem} />
+      )}
 
       {/* Bottom activity bar */}
       <div className="pointer-events-auto">
@@ -74,8 +68,9 @@ function MapInner({ setActiveItem }) {
  *
  * @param {object}   props
  * @param {function} [props.setActiveItem] — Callback to activate the right panel
+ * @param {string}   [props.theme]         — Current application theme ("light" | "dark")
  */
-export function MapContainer({ setActiveItem }) {
+export function MapContainer({ setActiveItem, theme = "light" }) {
   return (
     <div
       className={`relative flex-1 h-full overflow-hidden select-none ${zIndex.cards}`}
@@ -83,8 +78,8 @@ export function MapContainer({ setActiveItem }) {
       role="region"
     >
       {/* MapProvider owns the map DOM mount point and the MapLibre lifecycle */}
-      <MapProvider>
-        <MapInner setActiveItem={setActiveItem} />
+      <MapProvider theme={theme}>
+        <MapInner setActiveItem={setActiveItem} theme={theme} />
       </MapProvider>
     </div>
   );

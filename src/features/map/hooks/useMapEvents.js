@@ -51,8 +51,8 @@ export function useMapEvents() {
     map.on("rotate", syncState);
     map.on("pitch", syncState);
 
-    // seed initial values
-    syncState();
+    // seed initial values asynchronously to prevent synchronous cascading renders
+    Promise.resolve().then(syncState);
 
     return () => {
       map.off("move", syncState);
