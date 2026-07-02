@@ -1,93 +1,363 @@
 @import "tailwindcss";
 
 :root {
-  --background: oklch(0.99 0.003 240);
-  --foreground: oklch(0.18 0.015 240);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.015 240);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.015 240);
-  --primary: oklch(0.48 0.18 250);
-  --primary-foreground: oklch(0.99 0.003 240);
-  --secondary: oklch(0.95 0.01 240);
-  --secondary-foreground: oklch(0.18 0.015 240);
-  --muted: oklch(0.96 0.005 240);
-  --muted-foreground: oklch(0.5 0.015 240);
-  --accent: oklch(0.95 0.02 250);
-  --accent-foreground: oklch(0.2 0.1 250);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.99 0.003 240);
-  --border: oklch(0.91 0.01 240);
-  --input: oklch(0.91 0.01 240);
-  --ring: oklch(0.48 0.18 250);
+  /* Light Mode Palette (Warm White, Professional, Calm) */
+  --background: hsl(40 20% 98%); /* Soft warm white, premium notion/apple maps feel */
+  --foreground: hsl(215 25% 12%); /* Deep charcoal/navy slate */
   
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
+  --card: hsl(0 0% 100%); /* Pure white card for elevation */
+  --card-foreground: hsl(215 25% 12%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(215 25% 12%);
   
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+  /* Primary Transit Indigo/Navy */
+  --primary: hsl(215 90% 32%); /* Premium navy slate, reminiscent of FlightRadar24 / Stripe */
+  --primary-hover: hsl(215 85% 26%);
+  --primary-active: hsl(215 80% 20%);
+  --primary-foreground: hsl(0 0% 100%);
+  
+  /* Secondary Grey */
+  --secondary: hsl(214 15% 94%); /* Light secondary background */
+  --secondary-hover: hsl(214 15% 88%);
+  --secondary-foreground: hsl(215 25% 12%);
+  
+  /* Highlight Accent */
+  --accent: hsl(215 90% 32%);
+  --accent-hover: hsl(215 85% 26%);
+  --accent-foreground: hsl(0 0% 100%);
+  
+  /* Surface colors */
+  --surface: hsl(215 15% 96%); /* Grey surface for list views/tables */
+  --surface-secondary: hsl(215 15% 93%);
+  
+  /* Borders */
+  --border: hsl(214 16% 91%); /* Clean hairline border */
+  --border-strong: hsl(214 16% 80%); /* Strong border for distinct lines */
+  --input: hsl(214 16% 91%);
+  --ring: hsl(215 90% 32%);
+  
+  /* Text */
+  --text-primary: hsl(215 25% 12%);
+  --text-secondary: hsl(215 16% 40%);
+  --text-muted: hsl(215 12% 55%);
+  
+  /* Semantic Statuses */
+  --success: hsl(142 70% 32%); /* On Time / Active / Moving */
+  --success-foreground: hsl(0 0% 100%);
+  --warning: hsl(35 90% 48%); /* Delayed / Pending */
+  --warning-foreground: hsl(0 0% 100%);
+  --danger: hsl(0 84% 44%); /* Cancelled / Offline / Maintenance */
+  --danger-foreground: hsl(0 0% 100%);
+  --info: hsl(199 89% 38%); /* Info alerts */
+  
+  /* Interaction overlays */
+  --disabled: hsl(210 10% 90%);
+  --disabled-foreground: hsl(210 10% 55%);
+  --overlay: hsla(215, 25%, 12%, 0.4);
+  --focus-ring: hsla(215, 90%, 32%, 0.35);
+
+  /* Map Specifics (Calm, professional navigation styling) */
+  --map-water: hsl(205 90% 88%);
+  --map-roads: hsl(0 0% 100%);
+  --map-parks: hsl(110 35% 91%);
+  --map-buildings: hsl(40 10% 94%);
+
+  /* 16 Distinguishable Route Colors (Luminance balanced for Light Mode) */
+  --route-1: hsl(0 75% 45%);     /* Crimson */
+  --route-2: hsl(25 85% 45%);    /* Orange */
+  --route-3: hsl(45 85% 40%);    /* Amber */
+  --route-4: hsl(100 50% 35%);   /* Forest Green */
+  --route-5: hsl(142 65% 35%);   /* Emerald */
+  --route-6: hsl(170 70% 35%);   /* Teal */
+  --route-7: hsl(195 75% 40%);   /* Cyan */
+  --route-8: hsl(215 80% 45%);   /* Royal Blue */
+  --route-9: hsl(235 65% 55%);   /* Indigo */
+  --route-10: hsl(260 65% 50%);  /* Violet */
+  --route-11: hsl(285 60% 45%);  /* Purple */
+  --route-12: hsl(325 70% 45%);  /* Magenta */
+  --route-13: hsl(345 65% 48%);  /* Rose */
+  --route-14: hsl(20 50% 40%);   /* Sienna */
+  --route-15: hsl(160 40% 40%);  /* Sage */
+  --route-16: hsl(210 30% 45%);  /* Steel */
+
+  /* Radius System */
+  --radius-sm: 0.25rem;   /* 4px */
+  --radius-md: 0.375rem; /* 6px */
+  --radius-lg: 0.5rem;   /* 8px */
+  --radius-xl: 0.75rem;  /* 12px */
+  --radius-2xl: 1rem;    /* 16px */
+
+  /* Shadows System */
+  --shadow-level1: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-level2: 0 3px 6px -1px rgba(0, 0, 0, 0.06), 0 1px 3px -1px rgba(0, 0, 0, 0.04);
+  --shadow-level3: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-level4: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* Z-index raw numbers */
+  --z-background: -10;
+  --z-cards: 0;
+  --z-sticky: 10;
+  --z-dropdown: 20;
+  --z-floating-controls: 30;
+  --z-drawer: 40;
+  --z-dialog: 50;
+  --z-toast: 60;
+  --z-tooltip: 70;
 }
 
+/* Dark Mode Overrides (Supports system default and manual .dark toggling) */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: oklch(0.1 0.01 240);
-    --foreground: oklch(0.95 0.005 240);
-    --card: oklch(0.13 0.012 240);
-    --card-foreground: oklch(0.95 0.005 240);
-    --popover: oklch(0.13 0.012 240);
-    --popover-foreground: oklch(0.95 0.005 240);
-    --primary: oklch(0.6 0.16 250);
-    --primary-foreground: oklch(0.1 0.01 240);
-    --secondary: oklch(0.18 0.015 240);
-    --secondary-foreground: oklch(0.95 0.005 240);
-    --muted: oklch(0.16 0.012 240);
-    --muted-foreground: oklch(0.6 0.01 240);
-    --accent: oklch(0.2 0.04 250);
-    --accent-foreground: oklch(0.95 0.005 240);
-    --destructive: oklch(0.45 0.18 25);
-    --destructive-foreground: oklch(0.95 0.005 240);
-    --border: oklch(0.22 0.015 240);
-    --input: oklch(0.22 0.015 240);
-    --ring: oklch(0.6 0.16 250);
+    --background: hsl(215 15% 10%); /* Deep rich charcoal, not pitch black */
+    --foreground: hsl(210 20% 96%);
+    
+    --card: hsl(215 15% 13%); /* Elevated dark surface */
+    --card-foreground: hsl(210 20% 96%);
+    --popover: hsl(215 15% 13%);
+    --popover-foreground: hsl(210 20% 96%);
+    
+    --primary: hsl(215 90% 55%); /* Brightened for dark accessibility */
+    --primary-hover: hsl(215 90% 62%);
+    --primary-active: hsl(215 90% 70%);
+    --primary-foreground: hsl(215 15% 10%);
+    
+    --secondary: hsl(215 12% 18%);
+    --secondary-hover: hsl(215 12% 24%);
+    --secondary-foreground: hsl(210 20% 96%);
+    
+    --accent: hsl(215 90% 55%);
+    --accent-hover: hsl(215 90% 62%);
+    --accent-foreground: hsl(215 15% 10%);
+    
+    --surface: hsl(215 15% 12%);
+    --surface-secondary: hsl(215 15% 15%);
+    
+    --border: hsl(215 12% 20%);
+    --border-strong: hsl(215 12% 30%);
+    --input: hsl(215 12% 20%);
+    --ring: hsl(215 90% 55%);
+    
+    --text-primary: hsl(210 20% 96%);
+    --text-secondary: hsl(210 12% 70%);
+    --text-muted: hsl(210 10% 50%);
+    
+    --success: hsl(142 60% 45%);
+    --success-foreground: hsl(215 15% 10%);
+    --warning: hsl(35 80% 50%);
+    --warning-foreground: hsl(215 15% 10%);
+    --danger: hsl(0 75% 55%);
+    --danger-foreground: hsl(215 15% 10%);
+    
+    --disabled: hsl(215 10% 18%);
+    --disabled-foreground: hsl(215 10% 48%);
+    --overlay: hsla(215, 15%, 8%, 0.7);
+    --focus-ring: hsla(215, 90%, 55%, 0.4);
+
+    --map-water: hsl(215 35% 16%);
+    --map-roads: hsl(215 12% 18%);
+    --map-parks: hsl(120 20% 14%);
+    --map-buildings: hsl(215 12% 13%);
+
+    /* Route colors adjusted for dark background contrast */
+    --route-1: hsl(0 75% 55%);
+    --route-2: hsl(25 85% 55%);
+    --route-3: hsl(45 85% 50%);
+    --route-4: hsl(100 50% 48%);
+    --route-5: hsl(142 65% 48%);
+    --route-6: hsl(170 70% 48%);
+    --route-7: hsl(195 75% 52%);
+    --route-8: hsl(215 80% 58%);
+    --route-9: hsl(235 65% 65%);
+    --route-10: hsl(260 65% 62%);
+    --route-11: hsl(285 60% 58%);
+    --route-12: hsl(325 70% 58%);
+    --route-13: hsl(345 65% 60%);
+    --route-14: hsl(20 50% 52%);
+    --route-15: hsl(160 40% 52%);
+    --route-16: hsl(210 30% 58%);
+
+    --shadow-level1: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+    --shadow-level2: 0 3px 6px -1px rgba(0, 0, 0, 0.3), 0 1px 3px -1px rgba(0, 0, 0, 0.2);
+    --shadow-level3: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    --shadow-level4: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
   }
 }
 
-@theme inline {
+.dark {
+  --background: hsl(215 15% 10%);
+  --foreground: hsl(210 20% 96%);
+  
+  --card: hsl(215 15% 13%);
+  --card-foreground: hsl(210 20% 96%);
+  --popover: hsl(215 15% 13%);
+  --popover-foreground: hsl(210 20% 96%);
+  
+  --primary: hsl(215 90% 55%);
+  --primary-hover: hsl(215 90% 62%);
+  --primary-active: hsl(215 90% 70%);
+  --primary-foreground: hsl(215 15% 10%);
+  
+  --secondary: hsl(215 12% 18%);
+  --secondary-hover: hsl(215 12% 24%);
+  --secondary-foreground: hsl(210 20% 96%);
+  
+  --accent: hsl(215 90% 55%);
+  --accent-hover: hsl(215 90% 62%);
+  --accent-foreground: hsl(215 15% 10%);
+  
+  --surface: hsl(215 15% 12%);
+  --surface-secondary: hsl(215 15% 15%);
+  
+  --border: hsl(215 12% 20%);
+  --border-strong: hsl(215 12% 30%);
+  --input: hsl(215 12% 20%);
+  --ring: hsl(215 90% 55%);
+  
+  --text-primary: hsl(210 20% 96%);
+  --text-secondary: hsl(210 12% 70%);
+  --text-muted: hsl(210 10% 50%);
+  
+  --success: hsl(142 60% 45%);
+  --success-foreground: hsl(215 15% 10%);
+  --warning: hsl(35 80% 50%);
+  --warning-foreground: hsl(215 15% 10%);
+  --danger: hsl(0 75% 55%);
+  --danger-foreground: hsl(215 15% 10%);
+  
+  --disabled: hsl(215 10% 18%);
+  --disabled-foreground: hsl(215 10% 48%);
+  --overlay: hsla(215, 15%, 8%, 0.7);
+  --focus-ring: hsla(215, 90%, 55%, 0.4);
+
+  --map-water: hsl(215 35% 16%);
+  --map-roads: hsl(215 12% 18%);
+  --map-parks: hsl(120 20% 14%);
+  --map-buildings: hsl(215 12% 13%);
+
+  --route-1: hsl(0 75% 55%);
+  --route-2: hsl(25 85% 55%);
+  --route-3: hsl(45 85% 50%);
+  --route-4: hsl(100 50% 48%);
+  --route-5: hsl(142 65% 48%);
+  --route-6: hsl(170 70% 48%);
+  --route-7: hsl(195 75% 52%);
+  --route-8: hsl(215 80% 58%);
+  --route-9: hsl(235 65% 65%);
+  --route-10: hsl(260 65% 62%);
+  --route-11: hsl(285 60% 58%);
+  --route-12: hsl(325 70% 58%);
+  --route-13: hsl(345 65% 60%);
+  --route-14: hsl(20 50% 52%);
+  --route-15: hsl(160 40% 52%);
+  --route-16: hsl(210 30% 58%);
+
+  --shadow-level1: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-level2: 0 3px 6px -1px rgba(0, 0, 0, 0.3), 0 1px 3px -1px rgba(0, 0, 0, 0.2);
+  --shadow-level3: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-level4: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+}
+
+@theme {
+  /* Colors */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-accent-hover: var(--accent-hover);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-border-strong: var(--border-strong);
+  
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger-foreground: var(--danger-foreground);
+  
+  --color-disabled: var(--disabled);
+  --color-disabled-foreground: var(--disabled-foreground);
+  --color-overlay: var(--overlay);
+  --color-focus-ring: var(--focus-ring);
+
+  /* Map Specific Colors */
+  --color-map-water: var(--map-water);
+  --color-map-roads: var(--map-roads);
+  --color-map-parks: var(--map-parks);
+  --color-map-buildings: var(--map-buildings);
+
+  /* Route Colors */
+  --color-route-1: var(--route-1);
+  --color-route-2: var(--route-2);
+  --color-route-3: var(--route-3);
+  --color-route-4: var(--route-4);
+  --color-route-5: var(--route-5);
+  --color-route-6: var(--route-6);
+  --color-route-7: var(--route-7);
+  --color-route-8: var(--route-8);
+  --color-route-9: var(--route-9);
+  --color-route-10: var(--route-10);
+  --color-route-11: var(--route-11);
+  --color-route-12: var(--route-12);
+  --color-route-13: var(--route-13);
+  --color-route-14: var(--route-14);
+  --color-route-15: var(--route-15);
+  --color-route-16: var(--route-16);
+
+  /* Standard shadcn token integrations */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--secondary); /* Map muted to secondary for soft panels */
+  --color-muted-foreground: var(--text-muted);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* Borders & Radius mapping */
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
   --radius-2xl: var(--radius-2xl);
 
-  --shadow-sm: var(--shadow-sm);
-  --shadow-md: var(--shadow-md);
-  --shadow-lg: var(--shadow-lg);
-  --shadow-xl: var(--shadow-xl);
+  /* Shadows mapping */
+  --shadow-sm: var(--shadow-level1);
+  --shadow-md: var(--shadow-level2);
+  --shadow-lg: var(--shadow-level3);
+  --shadow-xl: var(--shadow-level4);
+  
+  --shadow-level1: var(--shadow-level1);
+  --shadow-level2: var(--shadow-level2);
+  --shadow-level3: var(--shadow-level3);
+  --shadow-level4: var(--shadow-level4);
+
+  /* Font mapping (resolving variable names from next/font/google in layout.js) */
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+
+  /* Z-Index mapping */
+  --z-index-background: var(--z-background);
+  --z-index-cards: var(--z-cards);
+  --z-index-sticky: var(--z-sticky);
+  --z-index-dropdown: var(--z-dropdown);
+  --z-index-floating-controls: var(--z-floating-controls);
+  --z-index-drawer: var(--z-drawer);
+  --z-index-dialog: var(--z-dialog);
+  --z-index-toast: var(--z-toast);
+  --z-index-tooltip: var(--z-tooltip);
+
+  /* Custom Easing for high-quality interactions */
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 body {
@@ -96,5 +366,22 @@ body {
   overflow: hidden;
   height: 100vh;
   width: 100vw;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom premium scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
