@@ -1,25 +1,40 @@
+/**
+ * src/features/map/components/BusLayer.jsx
+ *
+ * Live bus markers layers.
+ * Fetches real-time bus locations (all or selected route specific) from the backend,
+ * coordinates marker lifecycle states (entrance, active, exit), and renders animated markers.
+ */
+
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useTransit } from "@/features/transit/context/TransitContext";
 import { useLiveBuses, useAllBuses } from "@/hooks/api/useLiveBuses";
-import { BusMarker } from "./BusMarker";
+import { useAnimatedMarkers } from "../hooks/useAnimatedMarkers";
+import { AnimatedBusMarker } from "./AnimatedBusMarker";
 import { RotateCw, AlertTriangle } from "lucide-react";
 
-/**
- * BusMarkersLayer
- * Manages fetching of live buses and instantiating individual BusMarker components on the map.
- * Also handles loading, error, empty, and retry states for live bus updates.
- */
-export function BusMarkersLayer() {
+export function BusLayer() {
   const { selectedRouteId } = useTransit();
+  const [selectedBusId, setSelectedBusId] = useState(null);
 
-  // Fetch either specific route buses or all buses
+  // Fetch either specific route buses or all buses depending on route selection
   const routeBusesQuery = useLiveBuses(selectedRouteId);
-  const allBusesQuery = useAllBuses();
+  const allBusesQuery = useAllBuses({ enabled: !selectedRouteId });
 
   const activeQuery = selectedRouteId ? routeBusesQuery : allBusesQuery;
-  const { data: buses = [], isLoading, isError, error, refetch, isFetching } = activeQuery;
+  const {
+    data: buses = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = activeQuery;
+
+  // Track entering, active, and exiting markers
+  const { markers, removeMarker } = useAnimatedMarkers(buses);
 
   // 1. Loading State Overlay
   if (isLoading) {
@@ -53,8 +68,8 @@ export function BusMarkersLayer() {
     );
   }
 
-  // 3. Empty State Overlay
-  if (buses.length === 0) {
+  // 3. Empty State Overlay (only when we don't even have exiting markers to display)
+  if (buses.length === 0 && markers.length === 0) {
     return (
       <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40 bg-amber-950/95 border border-amber-800 text-white px-5 py-3 rounded-xl shadow-xl text-xs flex flex-col items-center pointer-events-auto backdrop-blur-sm max-w-[280px] text-center">
         <span className="font-semibold text-amber-200">No Active Transmitters</span>
@@ -76,26 +91,27 @@ export function BusMarkersLayer() {
 
   return (
     <>
-      {/* Small live heartbeat sync indicator in top right */}
+      {/* Sync indicator dot in top right during refetch */}
       {isFetching && (
         <div className="absolute top-4 right-16 z-30 bg-slate-950/80 text-emerald-400 border border-slate-800/60 p-1.5 rounded-lg shadow-md flex items-center justify-center pointer-events-none">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
         </div>
       )}
 
-      {/* Render Active Bus Markers */}
-      {buses.map((bus) => {
-        const lat = typeof bus.latitude === "number" ? bus.latitude : bus.position?.latitude;
-        const lng = typeof bus.longitude === "number" ? bus.longitude : bus.position?.longitude;
-
-        if (typeof lat !== "number" || typeof lng !== "number" || lat === 0 || lng === 0) {
-          return null;
-        }
-
-        return <BusMarker key={bus.id} bus={bus} />;
-      })}
+      {/* Render Active, Entering, and Exiting Bus Markers */}
+      {markers.map((marker) => (
+        <AnimatedBusMarker
+          key={marker.id}
+          bus={marker.bus}
+          prevBus={marker.prevBus}
+          status={marker.status}
+          onExitComplete={removeMarker}
+          isSelected={marker.id === selectedBusId}
+          onSelect={() => setSelectedBusId((prev) => (prev === marker.id ? null : marker.id))}
+        />
+      ))}
     </>
   );
 }
 
-export default BusMarkersLayer;
+export default BusLayer;
