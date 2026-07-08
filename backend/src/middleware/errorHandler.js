@@ -63,5 +63,17 @@ export function errorHandler(err, req, res, _next) {
     error.message,
   );
 
-  sendError(res, error, req.id);
+  if (req.originalUrl?.startsWith('/api/')) {
+    const statusCode = error.statusCode ?? 500;
+    const code = error.code ?? 'INTERNAL_SERVER_ERROR';
+    const message = error.isOperational ? error.message : 'An unexpected error occurred';
+    res.status(statusCode).json({
+      success: false,
+      error: { code, message },
+      timestamp: new Date().toISOString(),
+      requestId: req.id ?? null,
+    });
+  } else {
+    sendError(res, error, req.id);
+  }
 }

@@ -1,6 +1,6 @@
 # API Reference
 
-> Mysore Bus Backend — API v1
+> Mysore Bus Backend — REST API v1
 
 **Base URL:** `http://localhost:4000`
 **API Prefix:** `/api/v1`
@@ -10,40 +10,32 @@
 
 ## Standard Response Envelope
 
-Every endpoint returns the same envelope structure:
+Every endpoint under `/api/v1` returns a standardized response envelope.
 
-### Success
+### Success (200 OK)
 
 ```json
 {
   "success": true,
-  "message": "Operation successful",
   "data": { ... },
-  "error": null,
   "timestamp": "2026-07-08T13:30:00.000Z",
   "requestId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 }
 ```
 
-### Error
+### Error (4xx / 5xx)
 
 ```json
 {
   "success": false,
-  "message": "Human-readable error description",
-  "data": null,
   "error": {
-    "code": "MACHINE_READABLE_CODE",
-    "message": "Human-readable error description",
-    "details": [ ... ]
+    "code": "ROUTE_NOT_FOUND",
+    "message": "Route with ID 999 was not found"
   },
   "timestamp": "2026-07-08T13:30:00.000Z",
   "requestId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 }
 ```
-
-> **Note:** `error.details` is only included in non-production environments.
-> `error.stack` is only included in `development`.
 
 ---
 
@@ -51,153 +43,172 @@ Every endpoint returns the same envelope structure:
 
 | Code | HTTP | Description |
 |---|---|---|
-| `VALIDATION_ERROR` | 400 | Request body/query/params failed validation |
-| `UNAUTHORIZED` | 401 | Authentication required |
-| `FORBIDDEN` | 403 | Insufficient permissions |
-| `NOT_FOUND` | 404 | Resource or route does not exist |
-| `CONFLICT` | 409 | Resource state conflict |
-| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests |
-| `API_ERROR` | 502 | Upstream service error |
-| `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error |
+| `VALIDATION_ERROR` | 400 | Request body/query/params failed Zod validation |
+| `ROUTE_NOT_FOUND` | 404 | Transit route with specified ID does not exist |
+| `BUS_NOT_FOUND` | 404 | Live bus transmitter with specified ID is offline or does not exist |
+| `SERVICE_UNAVAILABLE` | 503 | Upstream external transit connection (MITRA) failed or timed out |
+| `INTERNAL_SERVER_ERROR` | 500 | Unexpected system error |
 
 ---
 
 ## Endpoints
 
----
+### Health
 
-### GET /health
+#### `GET /api/v1/health`
+Returns system metrics, memory, uptime, database connections, and upstream MITRA reachability status.
 
-Returns the current health and vitals of the service.
-
-**Auth required:** No
-**Rate limited:** No
-
-**Response 200:**
-
-```json
-{
-  "success": true,
-  "message": "Service is healthy and running",
-  "data": {
-    "status": "healthy",
-    "application": "Mysore Bus Backend",
-    "version": "1.0.0",
-    "environment": "development",
-    "timestamp": "2026-07-08T13:30:00.000Z",
-    "uptime": {
-      "seconds": 3721,
-      "human": "1h 2m 1s"
-    },
-    "system": {
-      "platform": "linux",
-      "nodeVersion": "v22.0.0",
-      "memory": {
-        "totalMB": 8192,
-        "freeMB": 4096,
-        "usedMB": 4096,
-        "heapUsedMB": 48
+*   **Auth Required:** No
+*   **Response 200 OK:**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "status": "healthy",
+        "application": "mysore-bus-backend",
+        "version": "1.0.0",
+        "environment": "development",
+        "timestamp": "2026-07-08T14:20:00.000Z",
+        "uptime": { "seconds": 37, "human": "37s" },
+        "system": { "platform": "win32", "memory": { "totalMB": 16384, "freeMB": 8192 } },
+        "services": {
+          "database": { "status": "not_configured" },
+          "redis": { "status": "not_configured" },
+          "mitra": { "status": "UP", "reachability": true, "latencyMs": 140 }
+        }
       },
-      "cpuCount": 8,
-      "loadAvg": [0.12, 0.15, 0.18]
-    },
-    "services": {
-      "database": "not configured",
-      "redis": "not configured"
+      "timestamp": "...",
+      "requestId": "..."
     }
-  },
-  "error": null,
-  "timestamp": "2026-07-08T13:30:00.000Z",
-  "requestId": "..."
-}
-```
+    ```
 
 ---
 
-### GET /api/v1
+### Routes
 
-Returns version information and available endpoints.
+#### `GET /api/v1/routes`
+Returns every available transit route in the system.
 
-**Auth required:** No
-
-**Response 200:**
-
-```json
-{
-  "success": true,
-  "message": "Welcome to the Mysore Bus Backend API",
-  "data": {
-    "api": "Mysore Bus Backend",
-    "version": "v1",
-    "status": "operational",
-    "docs": "/docs/API.md",
-    "endpoints": {
-      "health": "GET /health",
-      "apiRoot": "GET /api/v1"
+*   **Response 200 OK:**
+    ```json
+    {
+      "success": true,
+      "data": [
+        {
+          "id": "201",
+          "number": "201",
+          "name": "Mysore to Chamundi Hill",
+          "source": "Mysore CBS",
+          "destination": "Chamundi Hill",
+          "direction": 1,
+          "totalStops": 10,
+          "distanceKm": 12.4
+        }
+      ],
+      "timestamp": "...",
+      "requestId": "..."
     }
-  }
-}
-```
+    ```
+
+#### `GET /api/v1/routes/:routeId`
+Returns metadata details of a specific route.
+
+*   **Response 200 OK:**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "id": "201",
+        "number": "201",
+        "name": "Mysore to Chamundi Hill"
+      },
+      "timestamp": "...",
+      "requestId": "..."
+    }
+    ```
+*   **Response 404 Not Found:** If the route does not exist.
+*   **Response 400 Bad Request:** If parameter validation fails.
+
+#### `GET /api/v1/routes/:routeId/buses`
+Returns all live buses currently operating on that route.
+
+*   **Response 200 OK:**
+    ```json
+    {
+      "success": true,
+      "data": [
+        {
+          "id": "101",
+          "routeId": "201",
+          "registrationNumber": "KA57F-1111",
+          "position": { "latitude": 12.3, "longitude": 76.65 },
+          "speed": 15,
+          "status": { "state": "EARLY", "delayMinutes": -7 }
+        }
+      ],
+      "timestamp": "...",
+      "requestId": "..."
+    }
+    ```
+
+#### `GET /api/v1/routes/:routeId/stops`
+Returns every bus stop along the route in the correct sequence.
+
+*   **Response 200 OK:**
+    ```json
+    {
+      "success": true,
+      "data": [
+        {
+          "id": "S1",
+          "name": "CBS Stand",
+          "sequence": 1,
+          "position": { "latitude": 12.31, "longitude": 76.66 }
+        }
+      ],
+      "timestamp": "...",
+      "requestId": "..."
+    }
+    ```
 
 ---
 
-## Rate Limiting
+### Buses
 
-| Limiter | Window | Max Requests | Applied To |
-|---|---|---|---|
-| `defaultLimiter` | 15 min | 100 | All routes globally |
-| `strictLimiter` | 15 min | 20 | Sensitive endpoints |
-| `burstLimiter` | 1 min | 300 | High-frequency polling |
+#### `GET /api/v1/buses`
+Returns all active live buses across all routes in the network.
 
-Rate limit headers returned:
+*   **Response 200 OK:**
+    ```json
+    {
+      "success": true,
+      "data": [
+        {
+          "id": "101",
+          "routeId": "201",
+          "registrationNumber": "KA57F-1111"
+        }
+      ],
+      "timestamp": "...",
+      "requestId": "..."
+    }
+    ```
 
-```
-RateLimit-Limit: 100
-RateLimit-Remaining: 99
-RateLimit-Reset: 1720447800
-```
+#### `GET /api/v1/buses/:busId`
+Returns real-time data for a single live bus transmitter.
 
-When exceeded:
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "RATE_LIMIT_EXCEEDED",
-    "message": "Too many requests. Please slow down and try again later."
-  }
-}
-```
-
----
-
-## Request Tracing
-
-Every request receives a unique `X-Request-ID` response header:
-
-```
-X-Request-ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-```
-
-Clients can send their own ID in the request and it will be honoured:
-
-```
-X-Request-ID: my-trace-id-123
-```
-
-Use this ID when contacting support to correlate with server logs.
-
----
-
-## Phase 2 Endpoints (Planned)
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/v1/buses` | All active buses with live positions |
-| GET | `/api/v1/buses/:id` | Single bus real-time data |
-| GET | `/api/v1/routes` | All transit routes |
-| GET | `/api/v1/routes/:id` | Single route with stops |
-| GET | `/api/v1/stops` | All bus stops |
-| GET | `/api/v1/stops/:id` | Single stop with upcoming buses |
-| GET | `/api/v1/eta` | ETA for bus at a stop |
-| GET | `/api/v1/search` | Search routes and stops |
+*   **Response 200 OK:**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "id": "101",
+        "routeId": "201",
+        "registrationNumber": "KA57F-1111"
+      },
+      "timestamp": "...",
+      "requestId": "..."
+    }
+    ```
+*   **Response 404 Not Found:** If the bus transmitter is offline or not found.
+*   **Response 400 Bad Request:** If parameter validation fails.

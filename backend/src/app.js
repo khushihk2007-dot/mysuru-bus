@@ -42,7 +42,7 @@ import { notFound }       from './middleware/notFound.js';
 import { errorHandler }   from './middleware/errorHandler.js';
 
 import healthRouter from './routes/health.js';
-import v1Router     from './routes/v1/index.js';
+import apiRouter    from './api/routes/index.js';
 
 /**
  * Creates and configures a fresh Express application instance.
@@ -86,7 +86,7 @@ export function createApp() {
 
   // ── 9. Routes ─────────────────────────────────────────────────────────────
   app.use('/health',  healthRouter);
-  app.use('/api/v1',  v1Router);
+  app.use('/api/v1',  apiRouter);
 
   // ── 10. 404 handler ───────────────────────────────────────────────────────
   app.use(notFound);

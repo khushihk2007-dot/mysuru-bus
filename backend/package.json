@@ -16,7 +16,8 @@
     "test:mitra":       "node src/services/mitra/tests/integration.js",
     "test:mitra:live":  "node src/services/mitra/tests/integration.js --live",
     "test:normalizers": "node src/services/mitra/normalizers/tests/unit.js",
-    "test:domain":      "node src/services/domain/tests/unit.js"
+    "test:domain":      "node src/services/domain/tests/unit.js",
+    "test:api":         "node src/api/tests/integration.js"
   },
   "dependencies": {
     "axios": "^1.18.1",
