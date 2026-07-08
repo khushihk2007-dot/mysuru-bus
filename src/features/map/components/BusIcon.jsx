@@ -1,69 +1,35 @@
 /**
  * src/features/map/components/BusIcon.jsx
  *
- * Top-down KSRTC-style bus icon.
+ * Clean top-down bus SVG — designed to match the Phase 8.1 mockup.
  *
- * Inspired by the red-and-cream KSRTC/BMTC Indian city bus aesthetic.
- * Designed for use as a rotating MapLibre map marker:
- *   • Front of bus faces UP  → correct at 0 ° (North)
- *   • The parent wrapper rotates this SVG to the GPS bearing
- *   • Transparent background
+ * Design details:
+ *   • Single solid route-color body
+ *   • Clear windshield (lighter tint) at the TOP — front of bus faces UP at 0°
+ *   • Rear window at the bottom
+ *   • Two side mirrors as tiny wing nubs
+ *   • Amber headlights strip at front
+ *   • Dark wheels at 4 corners
+ *   • Subtle inner body line for depth
+ *   • Selection: slightly larger with a glow ring rendered by the parent
  *
- * Visual design:
- *   • Deep red bus body   (#C0281C)
- *   • Cream accent stripe running across the mid-section
- *   • Teal-blue panoramic windshields (front + rear)
- *   • Darker roof panel with AC vents
- *   • Black tyres with grey rim highlights
- *   • Amber headlights, red tail-lights
- *   • Route-number dark badge on the roof
- *   • Soft drop-shadow beneath the body
- *   • Selection glow ring (shown only when isSelected)
+ * The parent (AnimatedBusMarker) rotates this element via CSS transform
+ * to match the GPS bearing, so the icon always faces its direction of travel.
  */
 
 "use client";
 
 import React from "react";
 
-/**
- * @param {object}  props
- * @param {string}  [props.color]          Route accent colour (overrides the default red).
- *                                         When absent the classic KSRTC red is used.
- * @param {number}  [props.size=36]        Bounding-box width = height in px.
- * @param {boolean} [props.isSelected]     Renders selection glow ring when true.
- * @param {string}  [props.className]
- */
-export function BusIcon({
-  color,
-  size = 36,
-  isSelected = false,
-  className = "",
-}) {
-  // Use the route colour for accent strip + selection ring only;
-  // the body always stays the KSRTC deep red unless the caller explicitly
-  // wants a fully custom-coloured bus.
-  const accentColor  = color ?? "#C0281C";
-  const bodyColor    = "#C0281C";          // classic KSRTC red
-  const roofColor    = "#991F16";          // darker roof
-  const creamColor   = "#F5E6C8";          // cream / off-white stripe
-  const glassColor   = "#5BBFCF";          // teal windshield
-  const glassDark    = "#3A9BAD";
-  const tyreColor    = "#1A1A1A";
-  const rimColor     = "#6B7280";
-  const shadowColor  = "#000";
-  const headlight    = "#FDE68A";
-  const taillight    = "#F87171";
-
-  // Unique gradient IDs scoped to this component render
-  const gradId   = `busBody_${size}`;
-  const roofGrad = `busRoof_${size}`;
-  const glassGrad= `busGlass_${size}`;
+export function BusIcon({ color = "#10B981", size = 28, className = "" }) {
+  // Derive a darker shade for depth / body edge
+  const id = color.replace("#", "");
 
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 40 56"
+      viewBox="0 0 28 44"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
@@ -71,167 +37,83 @@ export function BusIcon({
       aria-hidden="true"
     >
       <defs>
-        {/* ── Body gradient – darker on sides for depth ── */}
-        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%"   stopColor="#9B1E13" stopOpacity="1" />
-          <stop offset="18%"  stopColor={bodyColor} stopOpacity="1" />
-          <stop offset="82%"  stopColor={bodyColor} stopOpacity="1" />
-          <stop offset="100%" stopColor="#9B1E13" stopOpacity="1" />
+        {/* Body: subtle vertical gradient for depth */}
+        <linearGradient id={`body_${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor={color} stopOpacity="1"    />
+          <stop offset="100%" stopColor={color} stopOpacity="0.82" />
         </linearGradient>
 
-        {/* ── Roof gradient ── */}
-        <linearGradient id={roofGrad} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor={roofColor} />
-          <stop offset="100%" stopColor="#7A1710" />
+        {/* Side-edge shading makes it feel 3-D */}
+        <linearGradient id={`side_${id}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor="#000" stopOpacity="0.22" />
+          <stop offset="12%"  stopColor="#000" stopOpacity="0"    />
+          <stop offset="88%"  stopColor="#000" stopOpacity="0"    />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.22" />
         </linearGradient>
 
-        {/* ── Windshield glass gradient ── */}
-        <linearGradient id={glassGrad} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor={glassColor} stopOpacity="0.95" />
-          <stop offset="100%" stopColor={glassDark}  stopOpacity="0.75" />
+        {/* Windshield glass */}
+        <linearGradient id={`glass_${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#C7EEFF" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#7EC8E3" stopOpacity="0.80" />
         </linearGradient>
-
-        {/* ── Selection glow filter ── */}
-        <filter id="selGlow" x="-60%" y="-60%" width="220%" height="220%">
-          <feGaussianBlur stdDeviation="5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
 
-      {/* ════════════════════════════════════════════
-          SELECTION GLOW  (behind everything)
-      ════════════════════════════════════════════ */}
-      {isSelected && (
-        <ellipse
-          cx="20" cy="28"
-          rx="18" ry="26"
-          fill={accentColor}
-          opacity="0.22"
-          filter="url(#selGlow)"
-        />
-      )}
+      {/* ── Drop shadow ── */}
+      <ellipse cx="14" cy="40.5" rx="9" ry="2.5" fill="#000" opacity="0.18" />
 
-      {/* ════════════════════════════════════════════
-          DROP SHADOW
-      ════════════════════════════════════════════ */}
-      <ellipse cx="20" cy="50" rx="13" ry="3.5" fill={shadowColor} opacity="0.2" />
+      {/* ── Main body ── */}
+      <rect x="4" y="7" width="20" height="32" rx="4" fill={`url(#body_${id})`} />
 
-      {/* ════════════════════════════════════════════
-          BODY HULL
-      ════════════════════════════════════════════ */}
-      {/* Main body */}
-      <rect x="6" y="11" width="28" height="37" rx="4" fill={`url(#${gradId})`} />
+      {/* Side-edge darkening overlay */}
+      <rect x="4" y="7" width="20" height="32" rx="4" fill={`url(#side_${id})`} />
 
-      {/* Front nose (rounded) */}
-      <rect x="8"  y="7"  width="24" height="6"  rx="3.5" fill={bodyColor} />
+      {/* ── Front nose cap ── */}
+      <rect x="6" y="4" width="16" height="5" rx="3" fill={color} />
 
-      {/* Rear bumper */}
-      <rect x="9"  y="46" width="22" height="5"  rx="2.5" fill={bodyColor} opacity="0.85" />
+      {/* ── Rear bumper ── */}
+      <rect x="6" y="36" width="16" height="4" rx="2" fill={color} opacity="0.75" />
 
-      {/* ════════════════════════════════════════════
-          CREAM HORIZONTAL STRIPE
-          Runs across the body mid-section
-      ════════════════════════════════════════════ */}
-      {/* Full-width cream band */}
-      <rect x="6"  y="28" width="28" height="8" fill={creamColor} />
-      {/* Thin red pinstripes bordering the cream band */}
-      <rect x="6"  y="27.5" width="28" height="1"   fill={bodyColor} opacity="0.6" />
-      <rect x="6"  y="36"   width="28" height="1"   fill={bodyColor} opacity="0.6" />
+      {/* ── Front windshield ── */}
+      <rect x="7" y="7" width="14" height="9" rx="2" fill={`url(#glass_${id})`} />
 
-      {/* ════════════════════════════════════════════
-          ROOF PANEL
-      ════════════════════════════════════════════ */}
-      <rect x="10" y="11" width="20" height="35" rx="2" fill={`url(#${roofGrad})`} opacity="0.55" />
-
-      {/* AC unit / roof vent blocks */}
-      <rect x="16" y="14" width="8"  height="4"  rx="1.5" fill="#7A1710" opacity="0.7" />
-      <rect x="17" y="14.5" width="6" height="3" rx="1"   fill="#5C120D" opacity="0.5" />
-
-      {/* Roof spine highlight */}
-      <rect x="19" y="13" width="2"  height="32" rx="1" fill="#fff" opacity="0.06" />
-
-      {/* ════════════════════════════════════════════
-          FRONT WINDSHIELD
-      ════════════════════════════════════════════ */}
-      <rect x="10" y="8" width="20" height="10" rx="2" fill={`url(#${glassGrad})`} />
       {/* Wiper lines */}
-      <line x1="13" y1="16.5" x2="19" y2="9.5"  stroke="#fff" strokeWidth="0.8" strokeOpacity="0.45" />
-      <line x1="27" y1="16.5" x2="21" y2="9.5"  stroke="#fff" strokeWidth="0.8" strokeOpacity="0.45" />
-      {/* Frame border */}
-      <rect x="10" y="8" width="20" height="10" rx="2" fill="none" stroke={bodyColor} strokeWidth="0.8" opacity="0.5" />
+      <line x1="9"  y1="15" x2="13" y2="9"  stroke="#fff" strokeWidth="0.7" strokeOpacity="0.5" />
+      <line x1="19" y1="15" x2="15" y2="9"  stroke="#fff" strokeWidth="0.7" strokeOpacity="0.5" />
 
-      {/* ════════════════════════════════════════════
-          REAR WINDSHIELD
-      ════════════════════════════════════════════ */}
-      <rect x="10" y="38" width="20" height="9" rx="2" fill={`url(#${glassGrad})`} opacity="0.8" />
-      <rect x="10" y="38" width="20" height="9" rx="2" fill="none" stroke={bodyColor} strokeWidth="0.8" opacity="0.4" />
+      {/* ── Rear window ── */}
+      <rect x="7" y="27" width="14" height="8" rx="2" fill={`url(#glass_${id})`} opacity="0.7" />
 
-      {/* ════════════════════════════════════════════
-          SIDE WINDOWS  (left column – x=6..9.5)
-      ════════════════════════════════════════════ */}
-      <rect x="6.5" y="13"  width="4" height="6"  rx="1.2" fill={glassColor} opacity="0.75" />
-      <rect x="6.5" y="21"  width="4" height="6"  rx="1.2" fill={glassColor} opacity="0.75" />
-      {/* cream stripe slot – no window */}
-      <rect x="6.5" y="37"  width="4" height="6"  rx="1.2" fill={glassColor} opacity="0.6" />
-      <rect x="6.5" y="44"  width="4" height="5"  rx="1.2" fill={glassColor} opacity="0.5" />
+      {/* ── Central body stripe (roof center line) ── */}
+      <rect x="12.5" y="7" width="3" height="32" rx="1" fill="#000" opacity="0.07" />
 
-      {/* ════════════════════════════════════════════
-          SIDE WINDOWS  (right column – x=29.5..34)
-      ════════════════════════════════════════════ */}
-      <rect x="29.5" y="13" width="4" height="6"  rx="1.2" fill={glassColor} opacity="0.75" />
-      <rect x="29.5" y="21" width="4" height="6"  rx="1.2" fill={glassColor} opacity="0.75" />
-      <rect x="29.5" y="37" width="4" height="6"  rx="1.2" fill={glassColor} opacity="0.6" />
-      <rect x="29.5" y="44" width="4" height="5"  rx="1.2" fill={glassColor} opacity="0.5" />
+      {/* ── Headlights ── */}
+      <rect x="7"  y="4.5" width="5" height="2" rx="1" fill="#FDE68A" opacity="0.95" />
+      <rect x="16" y="4.5" width="5" height="2" rx="1" fill="#FDE68A" opacity="0.95" />
 
-      {/* ════════════════════════════════════════════
-          WHEELS  (4 corners)
-      ════════════════════════════════════════════ */}
+      {/* ── Tail lights ── */}
+      <rect x="7"  y="38" width="5" height="2" rx="1" fill="#FCA5A5" opacity="0.9" />
+      <rect x="16" y="38" width="5" height="2" rx="1" fill="#FCA5A5" opacity="0.9" />
+
+      {/* ── Side mirrors (tiny wings off the sides) ── */}
+      <rect x="1"  y="11" width="3.5" height="5" rx="1" fill={color} opacity="0.9" />
+      <rect x="23.5" y="11" width="3.5" height="5" rx="1" fill={color} opacity="0.9" />
+
+      {/* ── Wheels (4 corners, dark) ── */}
       {/* Front-left */}
-      <rect x="2.5" y="9.5"  width="5.5" height="9" rx="2"   fill={tyreColor} />
-      <rect x="3.5" y="11"   width="3.5" height="6" rx="1.2" fill={rimColor}  />
-      <rect x="4.5" y="12.5" width="1.5" height="3" rx="0.7" fill="#9CA3AF"   />
+      <rect x="2" y="8"  width="4" height="7" rx="1.5" fill="#1e293b" />
+      <rect x="2.8" y="9" width="2.4" height="5" rx="1" fill="#374151" />
 
       {/* Front-right */}
-      <rect x="32"  y="9.5"  width="5.5" height="9" rx="2"   fill={tyreColor} />
-      <rect x="33"  y="11"   width="3.5" height="6" rx="1.2" fill={rimColor}  />
-      <rect x="34"  y="12.5" width="1.5" height="3" rx="0.7" fill="#9CA3AF"   />
+      <rect x="22" y="8"  width="4" height="7" rx="1.5" fill="#1e293b" />
+      <rect x="22.8" y="9" width="2.4" height="5" rx="1" fill="#374151" />
 
       {/* Rear-left */}
-      <rect x="2.5" y="38"   width="5.5" height="9" rx="2"   fill={tyreColor} />
-      <rect x="3.5" y="39.5" width="3.5" height="6" rx="1.2" fill={rimColor}  />
-      <rect x="4.5" y="41"   width="1.5" height="3" rx="0.7" fill="#9CA3AF"   />
+      <rect x="2" y="30" width="4" height="7" rx="1.5" fill="#1e293b" />
+      <rect x="2.8" y="31" width="2.4" height="5" rx="1" fill="#374151" />
 
       {/* Rear-right */}
-      <rect x="32"  y="38"   width="5.5" height="9" rx="2"   fill={tyreColor} />
-      <rect x="33"  y="39.5" width="3.5" height="6" rx="1.2" fill={rimColor}  />
-      <rect x="34"  y="41"   width="1.5" height="3" rx="0.7" fill="#9CA3AF"   />
-
-      {/* ════════════════════════════════════════════
-          HEADLIGHTS  (front)
-      ════════════════════════════════════════════ */}
-      <rect x="10" y="7"  width="6" height="2.5" rx="1.2" fill={headlight} opacity="0.95" />
-      <rect x="24" y="7"  width="6" height="2.5" rx="1.2" fill={headlight} opacity="0.95" />
-
-      {/* ════════════════════════════════════════════
-          TAIL LIGHTS  (rear)
-      ════════════════════════════════════════════ */}
-      <rect x="10" y="48" width="6" height="2.5" rx="1.2" fill={taillight} opacity="0.9" />
-      <rect x="24" y="48" width="6" height="2.5" rx="1.2" fill={taillight} opacity="0.9" />
-
-      {/* ════════════════════════════════════════════
-          DESTINATION BOARD  (above front windshield)
-          Small cream rectangle with a darker text hint
-      ════════════════════════════════════════════ */}
-      <rect x="13" y="7.5" width="14" height="3" rx="1" fill={creamColor} opacity="0.9" />
-      <rect x="14" y="8.2" width="12" height="1.5" rx="0.5" fill="#999" opacity="0.4" />
-
-      {/* ════════════════════════════════════════════
-          ROOF NUMBER BADGE
-      ════════════════════════════════════════════ */}
-      <rect x="15" y="20" width="10" height="6" rx="1.5" fill="#000" opacity="0.32" />
+      <rect x="22" y="30" width="4" height="7" rx="1.5" fill="#1e293b" />
+      <rect x="22.8" y="31" width="2.4" height="5" rx="1" fill="#374151" />
     </svg>
   );
 }
