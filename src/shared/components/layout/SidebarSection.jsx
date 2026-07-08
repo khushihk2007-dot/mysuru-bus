@@ -8,10 +8,71 @@ import React from "react";
 import { EmptyState } from "./EmptyState";
 import { PageHeader } from "./PageHeader";
 import { SectionCard } from "./SectionCard";
-import { MapPin, Route, Star, Search, Info, Sliders } from "lucide-react";
+import { MapPin, Route, Star, Search, Info, Sliders, Activity } from "lucide-react";
 import { useTransit } from "@/features/transit/context/TransitContext";
 import { RouteList } from "@/features/transit/components/RouteList";
 import { RouteDetails } from "@/features/transit/components/RouteDetails";
+import { useHealth } from "@/hooks/api/useHealth";
+
+function SystemHealthCard() {
+  const { data, isLoading, isError, refetch } = useHealth();
+
+  return (
+    <SectionCard>
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="w-4 h-4 text-primary" />
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">System Vitals</h3>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+          <div className="w-3.5 h-3.5 rounded-full border border-primary border-t-transparent animate-spin" />
+          <span>Querying platform vitals...</span>
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-xs text-destructive">
+            <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+            <span className="font-semibold">Backend Offline</span>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="w-full bg-secondary hover:bg-secondary/80 text-text-primary text-[10px] py-1.5 px-2.5 rounded-lg font-semibold transition-colors cursor-pointer"
+          >
+            Reconnect
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2.5 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Server API</span>
+            <div className="flex items-center gap-1.5 font-semibold text-emerald-500 font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{data?.status || "online"}</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">MITRA Link</span>
+            <div className="flex items-center gap-1.5 font-semibold text-emerald-500 font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Connected</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Uptime</span>
+            <span className="font-mono text-muted-foreground">{data?.uptime?.human || "N/A"}</span>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="w-full mt-1 bg-muted hover:bg-muted/70 text-[10px] text-muted-foreground py-1 px-2 rounded-md font-semibold transition-all hover:text-foreground cursor-pointer"
+          >
+            Refresh Status
+          </button>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
 
 export function SidebarSection({ activeSection, onSelectStop }) {
   const {
@@ -168,6 +229,7 @@ export function SidebarSection({ activeSection, onSelectStop }) {
                 </div>
               </div>
             </SectionCard>
+            <SystemHealthCard />
           </div>
         </div>
       );

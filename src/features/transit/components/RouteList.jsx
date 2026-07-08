@@ -8,7 +8,11 @@
 
 import React from "react";
 import { useTransit } from "../context/TransitContext";
-import { ArrowRight, Compass } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { RouteSelector } from "@/components/map/RouteSelector";
+
+import { Skeleton, Spinner } from "@/shared/components/ui/Loading";
+import { NoRoutesState } from "@/shared/components/ui/EmptyState";
 
 export function RouteList() {
   const {
@@ -17,29 +21,68 @@ export function RouteList() {
     setSelectedRouteId,
     setHoveredRouteId,
     loading,
-    error
+    error,
+    handleRetry
   } = useTransit();
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 gap-3">
-        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-        <span className="text-xs text-muted-foreground">Loading routes...</span>
+      <div className="flex flex-col gap-3 p-1">
+        {/* Loading Spinner */}
+        <div className="flex items-center justify-center gap-2 py-4">
+          <Spinner size="sm" />
+          <span className="text-xs text-muted-foreground font-medium">Syncing active transit lines...</span>
+        </div>
+        {/* Skeletons */}
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-3 p-3.5 border border-border/60 bg-card rounded-xl">
+            <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3 w-1/3 rounded" />
+              <Skeleton className="h-2.5 w-2/3 rounded" />
+            </div>
+            <Skeleton className="w-4 h-4 rounded-full shrink-0" />
+          </div>
+        ))}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 border border-destructive/20 bg-destructive/5 rounded-xl text-center">
-        <span className="text-xs text-destructive font-medium">Failed to load routes</span>
-        <p className="text-[10px] text-muted-foreground mt-1">{error.message}</p>
+      <div className="p-5 border border-destructive/15 bg-destructive/5 rounded-xl text-center flex flex-col items-center gap-3">
+        <span className="text-xs text-destructive font-bold uppercase tracking-wider">Network Request Failed</span>
+        <p className="text-[10px] text-muted-foreground leading-normal max-w-[200px]">
+          {error.message || "Failed to reach backend services. Please verify your connection."}
+        </p>
+        <button
+          onClick={handleRetry}
+          className="bg-destructive hover:bg-destructive/90 text-white font-semibold text-[10px] px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer uppercase tracking-wider"
+        >
+          Retry Connection
+        </button>
       </div>
+    );
+  }
+
+  if (!routes || routes.length === 0) {
+    return (
+      <NoRoutesState
+        actionButton={
+          <button
+            onClick={handleRetry}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-[10px] px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer uppercase tracking-wider"
+          >
+            Retry Fetch
+          </button>
+        }
+      />
     );
   }
 
   return (
     <div className="flex flex-col gap-2.5" role="tablist" aria-label="Available Routes">
+      <RouteSelector className="mb-2" />
       {routes.map((route) => {
         const isHovered = false; // state handled by hover hooks
         const isSelected = selectedRouteId === route.id;

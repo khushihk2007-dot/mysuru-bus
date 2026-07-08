@@ -27,7 +27,7 @@ import { MOCK_ROUTES } from "../data/mockTransitData";
  */
 export function TransitLayers({ theme = "light", onSelectStop }) {
   const { map } = useMap();
-  const { selectedRouteId, routesGeoJSON, stopsGeoJSON, loading } = useTransit();
+  const { selectedRouteId, routesGeoJSON, stopsGeoJSON, loading, routes } = useTransit();
   const [sourcesReady, setSourcesReady] = useState(false);
 
   const routeSourceId = "transit-routes";
@@ -74,7 +74,7 @@ export function TransitLayers({ theme = "light", onSelectStop }) {
     if (!map || !selectedRouteId || loading || !sourcesReady) return;
 
     // Find the selected route coordinates
-    const selectedRoute = MOCK_ROUTES.find((r) => r.id === selectedRouteId);
+    const selectedRoute = routes.find((r) => r.id === selectedRouteId);
     if (!selectedRoute) return;
 
     const bounds = getRouteBounds(selectedRoute);
@@ -85,7 +85,7 @@ export function TransitLayers({ theme = "light", onSelectStop }) {
         duration: 1000
       });
     }
-  }, [map, selectedRouteId, loading, sourcesReady]);
+  }, [map, selectedRouteId, loading, sourcesReady, routes]);
 
   if (loading || !sourcesReady) return null;
 

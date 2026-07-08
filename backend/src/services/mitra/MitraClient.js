@@ -308,6 +308,10 @@ export class MitraClient {
    * @private
    */
   async _sendRequest(method, endpoint, data, options) {
+    if (process.env.MOCK_MITRA === "true") {
+      return this._getMockResponse(endpoint, data);
+    }
+
     const timeout = options.timeout ?? this._config.timeout;
 
     const axiosConfig = {
@@ -330,6 +334,125 @@ export class MitraClient {
     } catch (err) {
       throw this._mapError(err, endpoint);
     }
+  }
+
+  /**
+   * Returns simulated responses for local offline demonstration.
+   * @private
+   */
+  _getMockResponse(endpoint, data) {
+    const params = data instanceof URLSearchParams ? data : new URLSearchParams(data);
+    const routeId = params.get('route_id') || params.get('routeId');
+
+    if (endpoint === 'getAllRoutes') {
+      return {
+        status: 200,
+        data: [
+          { route_id: "201", route_no: "201", route_name: "Mysore CBS ⇄ Chamundi Hill", source: "Mysore CBS", destination: "Chamundi Hill", direction: "1", total_stops: "10", distance: "12.4" },
+          { route_id: "119", route_no: "119", route_name: "Mysore CBS ⇄ City Hospital", source: "Mysore CBS", destination: "City Hospital", direction: "1", total_stops: "8", distance: "9.5" },
+          { route_id: "80", route_no: "80", route_name: "Mysore CBS ⇄ JP Nagar", source: "Mysore CBS", destination: "JP Nagar", direction: "1", total_stops: "12", distance: "14.2" }
+        ]
+      };
+    }
+
+    if (endpoint === 'getRouteDetails') {
+      return {
+        status: 200,
+        data: [
+          { trip_id: `t${routeId}-1`, route_id: routeId, direction: "1" }
+        ]
+      };
+    }
+
+    if (endpoint === 'getStopDetails') {
+      let stops = [];
+      if (routeId === "201") {
+        stops = [
+          { stop_id: "s201-1", stop_name: "City Bus Stand (CBS)", sequence_no: 1, latitude: "12.3115", longitude: "76.6545" },
+          { stop_id: "s201-2", stop_name: "Hardinge Circle", sequence_no: 2, latitude: "12.3085", longitude: "76.6565" },
+          { stop_id: "s201-3", stop_name: "Zoo Garden", sequence_no: 3, latitude: "12.3015", longitude: "76.6635" },
+          { stop_id: "s201-4", stop_name: "Chamundi Hill Terminus", sequence_no: 4, latitude: "12.2745", longitude: "76.6712" }
+        ];
+      } else if (routeId === "119") {
+        stops = [
+          { stop_id: "s119-1", stop_name: "City Bus Stand (CBS)", sequence_no: 1, latitude: "12.3115", longitude: "76.6545" },
+          { stop_id: "s119-2", stop_name: "Subbarayanakere", sequence_no: 2, latitude: "12.3035", longitude: "76.6495" },
+          { stop_id: "s119-3", stop_name: "City Hospital", sequence_no: 3, latitude: "12.2985", longitude: "76.6435" }
+        ];
+      } else {
+        stops = [
+          { stop_id: "s80-1", stop_name: "City Bus Stand (CBS)", sequence_no: 1, latitude: "12.3115", longitude: "76.6545" },
+          { stop_id: "s80-2", stop_name: "JP Nagar Circle", sequence_no: 2, latitude: "12.2715", longitude: "76.6345" }
+        ];
+      }
+      return {
+        status: 200,
+        data: stops
+      };
+    }
+
+    if (endpoint === 'getLiveBusDetails') {
+      const time = Date.now() / 15000;
+      const offsetLat = Math.sin(time) * 0.003;
+      const offsetLng = Math.cos(time) * 0.003;
+
+      let buses = [];
+      if (routeId === "201") {
+        buses = [
+          {
+            bus_id: "b201-1",
+            route_no: "201",
+            bus_reg_no: "KA55F-1234",
+            latitude: 12.3015 + offsetLat,
+            longitude: 76.6635 + offsetLng,
+            speed: "35",
+            ignition_status: "ON",
+            device_status: "ACTIVE",
+            updated_time: new Date().toISOString(),
+            direction: "1"
+          }
+        ];
+      } else if (routeId === "119") {
+        buses = [
+          {
+            bus_id: "b119-1",
+            route_no: "119",
+            bus_reg_no: "KA55F-5678",
+            latitude: 12.3035 - offsetLat,
+            longitude: 76.6495 + offsetLng,
+            speed: "28",
+            ignition_status: "ON",
+            device_status: "ACTIVE",
+            updated_time: new Date().toISOString(),
+            direction: "1"
+          }
+        ];
+      } else if (routeId === "80") {
+        buses = [
+          {
+            bus_id: "b80-1",
+            route_no: "80",
+            bus_reg_no: "KA55F-9012",
+            latitude: 12.2915 + offsetLat,
+            longitude: 76.6445 - offsetLng,
+            speed: "42",
+            ignition_status: "ON",
+            device_status: "ACTIVE",
+            updated_time: new Date().toISOString(),
+            direction: "1"
+          }
+        ];
+      }
+      return {
+        status: 200,
+        data: buses
+      };
+    }
+
+    return {
+      status: 404,
+      data: { error: "Not Found" }
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────

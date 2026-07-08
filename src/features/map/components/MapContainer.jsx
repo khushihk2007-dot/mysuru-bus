@@ -14,6 +14,7 @@ import { MapError } from "./MapError";
 import { FloatingSearch } from "@/shared/components/layout/FloatingSearch";
 import { BottomActivityBar } from "@/shared/components/layout/BottomActivityBar";
 import { TransitLayers } from "@/features/transit/components/TransitLayers";
+import { BusMarkersLayer } from "@/components/map/BusMarkersLayer";
 import { useMapContext } from "../context/MapContext";
 import { zIndex } from "@/design/zIndex";
 
@@ -38,7 +39,10 @@ function MapInner({ setActiveItem, theme = "light" }) {
 
       {/* Transit Map Layers (Polylines, stops, and selection rings) */}
       {isReady && !error && (
-        <TransitLayers theme={theme} onSelectStop={setActiveItem} />
+        <>
+          <TransitLayers theme={theme} onSelectStop={setActiveItem} />
+          <BusMarkersLayer />
+        </>
       )}
 
       {/* Bottom activity bar */}
