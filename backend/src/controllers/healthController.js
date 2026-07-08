@@ -10,12 +10,13 @@
  */
 
 import os from 'node:os';
-import { sendSuccess } from '../utils/response.js';
-import { APP } from '../constants/app.js';
-import { MESSAGES } from '../constants/messages.js';
-import { env } from '../config/env.js';
+import { sendSuccess }   from '../utils/response.js';
+import { APP }           from '../constants/app.js';
+import { MESSAGES }      from '../constants/messages.js';
+import { env }           from '../config/env.js';
 import { databaseConfig } from '../config/database.js';
-import { redisConfig } from '../config/redis.js';
+import { redisConfig }   from '../config/redis.js';
+import { mitraClient }   from '../services/mitra/index.js';
 
 const startTime = Date.now();
 
@@ -51,6 +52,10 @@ export function getHealth(req, res) {
     services: {
       database: databaseConfig.connected ? 'connected' : 'not configured',
       redis:    redisConfig.connected    ? 'connected' : 'not configured',
+      mitra: {
+        baseUrl: env.MITRA_BASE_URL,
+        metrics: mitraClient.getMetrics(),
+      },
     },
   };
 

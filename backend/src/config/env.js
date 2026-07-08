@@ -47,11 +47,13 @@ export const env = Object.freeze({
   CLIENT_URL: get('CLIENT_URL', 'http://localhost:3000'),
 
   // ── External APIs ─────────────────────────────────────────
-  MITRA_BASE_URL: get('MITRA_BASE_URL', 'https://mtis.mysuru.gov.in/api'),
+  MITRA_BASE_URL: get('MITRA_BASE_URL', 'http://mitra.ksrtc.in/Mysore_commuter_3'),
   MITRA_API_KEY: get('MITRA_API_KEY', ''),
 
   // ── HTTP Client ───────────────────────────────────────────
   REQUEST_TIMEOUT: getInt('REQUEST_TIMEOUT', 10000),
+  MAX_RETRIES:     getInt('MAX_RETRIES', 3),
+  RETRY_DELAY:     getInt('RETRY_DELAY', 500),
 
   // ── Logging ───────────────────────────────────────────────
   LOG_LEVEL: get('LOG_LEVEL', 'info'),

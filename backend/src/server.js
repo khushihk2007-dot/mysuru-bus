@@ -19,6 +19,7 @@ import { logger }       from './config/logger.js';
 import { env }          from './config/env.js';
 import { serverConfig } from './config/server.js';
 import { APP }          from './constants/app.js';
+import { mitraClient }  from './services/mitra/index.js';
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ function gracefulShutdown(signal) {
     }
 
     logger.info('HTTP server closed — all connections drained');
+    mitraClient.destroy();       // Release keep-alive connection pool
     // Future: await db.disconnect(); await redis.quit();
     process.exit(0);
   });
