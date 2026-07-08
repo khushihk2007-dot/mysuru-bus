@@ -1,288 +1,451 @@
 /**
  * src/features/map/components/AnimatedBusMarker.jsx
  *
- * High-performance animated bus marker on MapLibre.
- * - Interpolates position in WGS-84 coordinates on requestAnimationFrame.
- * - Computes and animates travel direction (heading) smoothly.
- * - Utilizes Framer Motion for entrance, exit, hover, and selection pulse/glow effects.
- * - Employs React.memo to prevent unnecessary React renders.
+ * Renders a live bus on the MapLibre map as a custom DOM element.
+ *
+ * Architecture
+ * ─────────────────────────────────────────────────────────────
+ * MapLibre Marker
+ *   └─ React Portal → outer motion.div (Framer Motion)
+ *         ├─ Info popup  [upright, appears above the icon]
+ *         └─ icon wrapper div [rotates via CSS transition — no React re-render]
+ *               └─ BusIcon SVG
+ *
+ * Position / heading updates are applied IMPERATIVELY inside a requestAnimationFrame
+ * loop so they NEVER trigger React renders (60 fps smooth movement).
+ *
+ * Framer Motion handles only:
+ *   • entrance  → scale 0.7→1, opacity 0→1
+ *   • exit       → scale 0.8→0, opacity 1→0
+ *   • selection → scale 1→1.15 spring
  */
 
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMap } from "@/features/map";
 import maplibregl from "maplibre-gl";
+import { BusIcon } from "./BusIcon";
 import { getHaversineDistance } from "../utils/distance";
 import { getBearing } from "../utils/heading";
 import { lerp, interpolateAngle } from "../utils/interpolation";
 
+// ─── Route colour palette (mirrors TransitContext) ───────────────────────────
+const ROUTE_COLORS = {
+  "119": "#EF4444",
+  r119: "#EF4444",
+  "201": "#3B82F6",
+  r201: "#3B82F6",
+  "80": "#10B981",
+  r80: "#10B981",
+};
+const DEFAULT_COLOR = "#6366F1";
+
+function getRouteColor(routeId) {
+  return ROUTE_COLORS[routeId] ?? DEFAULT_COLOR;
+}
+
+// ─── Framer Motion variant presets ───────────────────────────────────────────
+const OUTER_VARIANTS = {
+  enter: { scale: 0.7, opacity: 0 },
+  active: { scale: 1, opacity: 1 },
+  selected: { scale: 1.15, opacity: 1 },
+  exiting: { scale: 0.8, opacity: 0 },
+};
+
+const POPUP_VARIANTS = {
+  hidden: { opacity: 0, y: 5, scale: 0.95 },
+  visible: { opacity: 1, y: 0, scale: 1 },
+};
+
+// ─── Status helper ────────────────────────────────────────────────────────────
+function getStatusLabel(bus) {
+  const s = bus.status;
+  if (!s || !s.state) return { label: "ONLINE", color: "#94a3b8" };
+  if (s.state === "LATE")
+    return { label: `LATE  ${s.delayMinutes}m`, color: "#f87171" };
+  if (s.state === "EARLY")
+    return { label: `EARLY  ${Math.abs(s.delayMinutes)}m`, color: "#34d399" };
+  if (s.state === "ON_TIME") return { label: "ON TIME", color: "#34d399" };
+  if (s.state === "UNKNOWN") return { label: "UNKNOWN", color: "#94a3b8" };
+  return { label: s.state, color: "#94a3b8" };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export const AnimatedBusMarker = React.memo(
   function AnimatedBusMarker({
     bus,
     prevBus,
-    status,
+    status,          // "entering" | "active" | "exiting"
     onExitComplete,
     isSelected,
     onSelect,
   }) {
     const { map } = useMap();
+
+    // MapLibre requires a real DOM node — created once, never re-created
     const [element] = useState(() => {
-      const div = document.createElement("div");
-      div.style.position = "absolute";
-      return div;
+      const el = document.createElement("div");
+      el.style.cssText = "position:absolute;pointer-events:none;";
+      return el;
     });
 
-    const markerRef = useRef(null);
-    const iconRef = useRef(null);
-    const rafIdRef = useRef(null);
-    const animationRef = useRef(null);
+    const markerRef   = useRef(null);   // MapLibre Marker instance
+    const iconWrapRef = useRef(null);   // The div that rotates (direct DOM writes)
+    const rafIdRef    = useRef(null);   // rAF handle for the position loop
+    const animRef     = useRef(null);   // Current in-flight animation state
 
-    // Extract coordinates safely
-    const targetLat = typeof bus.latitude === "number" ? bus.latitude : bus.position?.latitude;
-    const targetLng = typeof bus.longitude === "number" ? bus.longitude : bus.position?.longitude;
+    // Mutable refs — shared with the rAF loop; never trigger React renders
+    const coordsRef   = useRef({ lat: null, lng: null });  // current interpolated position
+    const headingRef  = useRef(0);                          // current interpolated heading (deg)
+    const targetRef   = useRef({ lat: null, lng: null });   // destination from latest API update
 
-    // Track last coords and heading
-    const currentCoordsRef = useRef({ lat: targetLat, lng: targetLng });
-    const lastTargetRef = useRef({ lat: null, lng: null });
+    // ── Extract target coordinates safely ─────────────────────────────────
+    const targetLat =
+      typeof bus.latitude === "number" ? bus.latitude : bus.position?.latitude;
+    const targetLng =
+      typeof bus.longitude === "number" ? bus.longitude : bus.position?.longitude;
 
-    // Initial heading: fallback to 0 (North) if we don't have movement direction yet
-    const currentHeadingRef = useRef(0);
+    const hasCoords =
+      typeof targetLat === "number" && typeof targetLng === "number";
 
-    // 1. Sync MapLibre marker lifecycle
+    const routeColor = getRouteColor(bus.routeId);
+
+    // ── 1. Mount MapLibre Marker (once) ───────────────────────────────────
     useEffect(() => {
-      if (!map || typeof targetLat !== "number" || typeof targetLng !== "number") return;
+      if (!map || !hasCoords) return;
 
-      const marker = new maplibregl.Marker({ element })
-        .setLngLat([targetLng, targetLat])
+      const initLat = targetLat;
+      const initLng = targetLng;
+
+      coordsRef.current = { lat: initLat, lng: initLng };
+      targetRef.current = { lat: initLat, lng: initLng };
+
+      const marker = new maplibregl.Marker({
+        element,
+        anchor: "center",         // we center the marker on the bus body
+      })
+        .setLngLat([initLng, initLat])
         .addTo(map);
 
       markerRef.current = marker;
-      element.style.zIndex = isSelected ? "50" : "10";
+
+      // Seed initial heading from prevBus if available
+      if (prevBus) {
+        const pLat =
+          typeof prevBus.latitude === "number"
+            ? prevBus.latitude
+            : prevBus.position?.latitude;
+        const pLng =
+          typeof prevBus.longitude === "number"
+            ? prevBus.longitude
+            : prevBus.position?.longitude;
+        if (typeof pLat === "number" && typeof pLng === "number") {
+          const d = getHaversineDistance(pLat, pLng, initLat, initLng);
+          if (d > 3) {
+            const b = getBearing(pLat, pLng, initLat, initLng);
+            headingRef.current = b;
+            applyIconRotation(b, false); // snap, no transition
+          }
+        }
+      }
 
       return () => {
         marker.remove();
         markerRef.current = null;
         if (rafIdRef.current) {
           cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
         }
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [map, element]);
 
-    // 2. Sync zIndex layering
+    // ── 2. Z-index sync ──────────────────────────────────────────────────
     useEffect(() => {
-      if (markerRef.current) {
+      if (element) {
         element.style.zIndex = isSelected ? "50" : "10";
       }
     }, [isSelected, element]);
 
-    // 3. Coordinate updates and smooth interpolation
+    // ── 3. Smooth position + heading interpolation ────────────────────────
     useEffect(() => {
-      if (typeof targetLat !== "number" || typeof targetLng !== "number") return;
+      if (!hasCoords || !markerRef.current) return;
 
-      const prevLat = lastTargetRef.current.lat;
-      const prevLng = lastTargetRef.current.lng;
+      const prevLat = targetRef.current.lat;
+      const prevLng = targetRef.current.lng;
 
-      // Handle initial load
+      // First arrival after mount — teleport straight to position
       if (prevLat === null || prevLng === null) {
-        lastTargetRef.current = { lat: targetLat, lng: targetLng };
-        currentCoordsRef.current = { lat: targetLat, lng: targetLng };
-
-        // Try to derive initial heading from previous telemetry if provided
-        if (prevBus) {
-          const pLat = typeof prevBus.latitude === "number" ? prevBus.latitude : prevBus.position?.latitude;
-          const pLng = typeof prevBus.longitude === "number" ? prevBus.longitude : prevBus.position?.longitude;
-          if (typeof pLat === "number" && typeof pLng === "number") {
-            const dist = getHaversineDistance(pLat, pLng, targetLat, targetLng);
-            if (dist > 3) {
-              const b = getBearing(pLat, pLng, targetLat, targetLng);
-              currentHeadingRef.current = b;
-              if (iconRef.current) {
-                iconRef.current.style.transform = `rotate(${b}deg)`;
-              }
-            }
-          }
-        }
-
-        if (markerRef.current) {
-          markerRef.current.setLngLat([targetLng, targetLat]);
-        }
+        targetRef.current  = { lat: targetLat, lng: targetLng };
+        coordsRef.current  = { lat: targetLat, lng: targetLng };
+        markerRef.current.setLngLat([targetLng, targetLat]);
         return;
       }
 
-      // Skip interpolation if position is identical
+      // Nothing changed — skip
       if (prevLat === targetLat && prevLng === targetLng) return;
 
-      // Compute heading if movement is significant (e.g. > 3 meters)
+      // Compute new bearing only when movement is meaningful (> 5 m)
       const dist = getHaversineDistance(prevLat, prevLng, targetLat, targetLng);
-      let newBearing = currentHeadingRef.current;
-      if (dist > 3) {
-        newBearing = getBearing(prevLat, prevLng, targetLat, targetLng);
-      }
+      const newBearing = dist > 5
+        ? getBearing(prevLat, prevLng, targetLat, targetLng)
+        : headingRef.current;
 
-      // Configure transition state: interpolate over 4.8 seconds (giving 200ms buffer for 5s polling cycle)
-      animationRef.current = {
-        startLat: currentCoordsRef.current.lat,
-        startLng: currentCoordsRef.current.lng,
-        endLat: targetLat,
-        endLng: targetLng,
-        startBearing: currentHeadingRef.current,
-        endBearing: newBearing,
-        startTime: performance.now(),
-        duration: 4800,
+      // Store destination
+      targetRef.current = { lat: targetLat, lng: targetLng };
+
+      // Kick off a new rAF animation (or replace the in-flight one)
+      animRef.current = {
+        startLat:     coordsRef.current.lat,
+        startLng:     coordsRef.current.lng,
+        endLat:       targetLat,
+        endLng:       targetLng,
+        startBearing: headingRef.current,
+        endBearing:   newBearing,
+        startTime:    performance.now(),
+        duration:     4800, // spread across full 5-second polling window
       };
 
-      lastTargetRef.current = { lat: targetLat, lng: targetLng };
-
-      // Interpolation animation frame loop
       if (!rafIdRef.current) {
-        const tick = () => {
-          const anim = animationRef.current;
-          if (!anim) {
-            rafIdRef.current = null;
-            return;
-          }
-
-          const now = performance.now();
-          const elapsed = now - anim.startTime;
-          const t = Math.min(elapsed / anim.duration, 1);
-
-          // Linear interpolation for coordinate positions
-          const currentLng = lerp(anim.startLng, anim.endLng, t);
-          const currentLat = lerp(anim.startLat, anim.endLat, t);
-
-          // Shortest-path angle interpolation for heading rotation
-          const currentBearing = interpolateAngle(anim.startBearing, anim.endBearing, t);
-
-          currentCoordsRef.current = { lat: currentLat, lng: currentLng };
-          currentHeadingRef.current = currentBearing;
-
-          if (markerRef.current) {
-            markerRef.current.setLngLat([currentLng, currentLat]);
-          }
-
-          if (iconRef.current) {
-            iconRef.current.style.transform = `rotate(${currentBearing}deg)`;
-          }
-
-          if (t < 1) {
-            rafIdRef.current = requestAnimationFrame(tick);
-          } else {
-            rafIdRef.current = null;
-          }
-        };
         rafIdRef.current = requestAnimationFrame(tick);
       }
-    }, [targetLat, targetLng, prevBus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [targetLat, targetLng]);
 
-    if (typeof targetLat !== "number" || typeof targetLng !== "number") {
-      return null;
+    // ── rAF tick (closure over refs — zero React involvement) ─────────────
+    const tick = useCallback(() => {
+      const anim = animRef.current;
+      if (!anim || !markerRef.current) {
+        rafIdRef.current = null;
+        return;
+      }
+
+      const elapsed = performance.now() - anim.startTime;
+      const t = Math.min(elapsed / anim.duration, 1);
+
+      // Ease-out cubic for a natural deceleration feel
+      const ease = 1 - Math.pow(1 - t, 3);
+
+      const lat = lerp(anim.startLat, anim.endLat, ease);
+      const lng = lerp(anim.startLng, anim.endLng, ease);
+      const bearing = interpolateAngle(anim.startBearing, anim.endBearing, ease);
+
+      coordsRef.current   = { lat, lng };
+      headingRef.current  = bearing;
+
+      // Imperatively move the MapLibre marker
+      markerRef.current.setLngLat([lng, lat]);
+
+      // Imperatively rotate the icon wrapper — GPU composited, ~0 cost
+      applyIconRotation(bearing, true);
+
+      if (t < 1) {
+        rafIdRef.current = requestAnimationFrame(tick);
+      } else {
+        rafIdRef.current = null;
+        animRef.current  = null;
+      }
+    }, []); // stable — reads only refs
+
+    // ── Helper: write CSS transform directly to the icon wrapper DOM node ──
+    function applyIconRotation(deg, smooth) {
+      if (!iconWrapRef.current) return;
+      iconWrapRef.current.style.transition = smooth
+        ? "transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+        : "none";
+      // translate3d forces GPU layer; rotate around icon centre
+      iconWrapRef.current.style.transform =
+        `translate3d(0,0,0) rotate(${deg}deg)`;
     }
+
+    if (!hasCoords) return null;
 
     const routeNum = bus.routeId || "BUS";
-    const regNum = bus.registrationNumber || "KA-XX-XXXX";
+    const regNum   = bus.registrationNumber || "KA-XX-XXXX";
+    const { label: statusLabel, color: statusColor } = getStatusLabel(bus);
 
-    let statusText = "ON TIME";
-    if (bus.status) {
-      const delay = bus.status.delayMinutes;
-      if (bus.status.state === "LATE") {
-        statusText = `LATE (${delay}m)`;
-      } else if (bus.status.state === "EARLY") {
-        statusText = `EARLY (${Math.abs(delay)}m)`;
-      } else if (bus.status.state) {
-        statusText = bus.status.state;
-      }
-    }
+    // Map status string → Framer variant
+    const animVariant =
+      status === "exiting"
+        ? "exiting"
+        : isSelected
+        ? "selected"
+        : "active";
+
+    // Icon size: base 36 px
+    const iconSize = isSelected ? 42 : 36;
 
     return createPortal(
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={
-          status === "exiting"
-            ? { scale: 0.7, opacity: 0 }
-            : {
-                scale: isSelected ? 1.12 : 1,
-                opacity: 1,
-              }
-        }
-        whileHover={{ scale: 1.08 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        onAnimationComplete={() => {
-          if (status === "exiting" && onExitComplete) {
-            onExitComplete(bus.id);
-          }
+        /* ── outer wrapper — Framer owns scale + opacity only ── */
+        variants={OUTER_VARIANTS}
+        initial="enter"
+        animate={animVariant}
+        exit="exiting"
+        transition={{
+          opacity:  { duration: 0.28, ease: "easeOut" },
+          scale:    { type: "spring", stiffness: 300, damping: 22 },
+        }}
+        onAnimationComplete={(def) => {
+          if (def === "exiting" && onExitComplete) onExitComplete(bus.id);
         }}
         onClick={onSelect}
-        className={`flex flex-col items-center pointer-events-auto select-none cursor-pointer origin-bottom ${
-          isSelected ? "drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]" : ""
-        }`}
+        style={{
+          display:        "flex",
+          flexDirection:  "column",
+          alignItems:     "center",
+          pointerEvents:  "auto",
+          cursor:         "pointer",
+          userSelect:     "none",
+          transformOrigin:"center bottom",
+          // GPU hint for the outer layer
+          willChange:     "transform, opacity",
+        }}
       >
-        {/* Label Display Card */}
-        <div className="flex flex-col items-center px-2.5 py-1.5 rounded-lg bg-slate-950/95 border border-slate-800 text-white font-mono text-[9px] leading-tight shadow-xl hover:border-emerald-500/40 transition-colors duration-150">
-          <div className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold text-[11px] text-emerald-400">{routeNum}</span>
-          </div>
-          <div className="text-slate-300 font-medium mt-0.5">{regNum}</div>
-          <div className="text-[7.5px] text-slate-400 font-semibold tracking-wider uppercase mt-0.5">
-            {statusText}
-          </div>
-        </div>
-
-        {/* Small connector vertical line */}
-        <div className="w-0.5 h-1.5 bg-slate-800" />
-
-        {/* Directional rotating indicator */}
-        <div className="relative flex items-center justify-center">
-          {/* Animated pulse ring */}
+        {/* ── Info popup (always upright — NOT inside the rotating wrapper) ── */}
+        <AnimatePresence>
           <motion.div
-            animate={{
-              scale: [1, 1.45, 1],
-              opacity: [0.45, 0, 0.45],
+            key="popup"
+            variants={POPUP_VARIANTS}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            style={{
+              marginBottom: 4,
+              padding:      "5px 8px",
+              borderRadius: 8,
+              background:   "rgba(2, 6, 23, 0.92)",
+              border:       `1px solid ${isSelected ? routeColor : "rgba(51,65,85,0.8)"}`,
+              backdropFilter: "blur(6px)",
+              boxShadow:    isSelected
+                ? `0 0 0 1px ${routeColor}44, 0 4px 20px ${routeColor}33`
+                : "0 2px 12px rgba(0,0,0,0.4)",
+              display:      "flex",
+              flexDirection:"column",
+              alignItems:   "center",
+              gap:          2,
+              minWidth:     64,
+              whiteSpace:   "nowrap",
+              pointerEvents:"none",
             }}
-            transition={{
-              duration: 2.2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="absolute w-6 h-6 rounded-full bg-emerald-500/35 pointer-events-none"
-          />
-
-          <div
-            ref={iconRef}
-            className="w-6 h-6 rounded-full bg-emerald-500 border border-slate-950 flex items-center justify-center shadow-lg"
-            style={{ transform: `rotate(${currentHeadingRef.current}deg)` }}
           >
-            {/* Navigational direction arrow pointing UP (0 deg) */}
-            <svg
-              className="w-3 h-3 text-slate-950 fill-current"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
-            </svg>
-          </div>
+            {/* Route badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span
+                style={{
+                  width: 7, height: 7,
+                  borderRadius: "50%",
+                  background: routeColor,
+                  boxShadow: `0 0 5px ${routeColor}`,
+                  flexShrink: 0,
+                  animation: "pulse 2s ease-in-out infinite",
+                }}
+              />
+              <span style={{
+                fontFamily:  "ui-monospace, monospace",
+                fontSize:    12,
+                fontWeight:  700,
+                color:       routeColor,
+                letterSpacing: "0.04em",
+              }}>
+                {routeNum}
+              </span>
+            </div>
+
+            {/* Registration plate */}
+            <span style={{
+              fontFamily:  "ui-monospace, monospace",
+              fontSize:    9.5,
+              fontWeight:  500,
+              color:       "#cbd5e1",
+              letterSpacing: "0.06em",
+            }}>
+              {regNum}
+            </span>
+
+            {/* Status pill */}
+            <span style={{
+              fontFamily:    "ui-monospace, monospace",
+              fontSize:      7.5,
+              fontWeight:    700,
+              color:         statusColor,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              opacity:       0.9,
+            }}>
+              {statusLabel}
+            </span>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* ── Connector stem ── */}
+        <div style={{
+          width:      1.5,
+          height:     6,
+          background: `linear-gradient(to bottom, ${routeColor}88, transparent)`,
+          borderRadius: 1,
+        }} />
+
+        {/* ── Rotating icon wrapper ── */}
+        {/* translate3d + rotate are GPU-composited; the ref is written imperatively */}
+        <div
+          ref={iconWrapRef}
+          className="bus-icon-wrap"
+          style={{
+            transform:     `translate3d(0,0,0) rotate(${headingRef.current}deg)`,
+            willChange:    "transform",
+            position:      "relative",
+            display:       "flex",
+            alignItems:    "center",
+            justifyContent:"center",
+          }}
+        >
+          {/* Outer selection / hover ring */}
+          {isSelected && (
+            <motion.div
+              animate={{
+                scale:   [1, 1.4, 1],
+                opacity: [0.5, 0, 0.5],
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                position:     "absolute",
+                inset:        -6,
+                borderRadius: "50%",
+                border:       `1.5px solid ${routeColor}`,
+                pointerEvents:"none",
+              }}
+            />
+          )}
+
+          <BusIcon
+            color={routeColor}
+            size={iconSize}
+            isSelected={isSelected}
+          />
         </div>
       </motion.div>,
       element
     );
   },
-  (prevProps, nextProps) => {
-    // Optimize performance: prevent rerendering unless core properties change
-    return (
-      prevProps.status === nextProps.status &&
-      prevProps.isSelected === nextProps.isSelected &&
-      prevProps.bus.id === nextProps.bus.id &&
-      prevProps.bus.latitude === nextProps.bus.latitude &&
-      prevProps.bus.longitude === nextProps.bus.longitude &&
-      prevProps.bus.position?.latitude === nextProps.bus.position?.latitude &&
-      prevProps.bus.position?.longitude === nextProps.bus.position?.longitude &&
-      prevProps.bus.status?.state === nextProps.bus.status?.state &&
-      prevProps.bus.status?.delayMinutes === nextProps.bus.status?.delayMinutes
-    );
-  }
+
+  // ── Custom memo comparator — bail out of render when nothing visual changed ──
+  (prev, next) =>
+    prev.status       === next.status       &&
+    prev.isSelected   === next.isSelected   &&
+    prev.bus.id       === next.bus.id       &&
+    prev.bus.routeId  === next.bus.routeId  &&
+    // Coordinates: trigger re-render so the useEffect fires and starts a new rAF
+    prev.bus.latitude              === next.bus.latitude              &&
+    prev.bus.longitude             === next.bus.longitude             &&
+    prev.bus.position?.latitude    === next.bus.position?.latitude    &&
+    prev.bus.position?.longitude   === next.bus.position?.longitude   &&
+    prev.bus.status?.state         === next.bus.status?.state         &&
+    prev.bus.status?.delayMinutes  === next.bus.status?.delayMinutes
 );
 
 export default AnimatedBusMarker;
