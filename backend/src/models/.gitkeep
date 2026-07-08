@@ -1,0 +1,10 @@
+# models/
+#
+# Data shape definitions (plain JS objects / classes — no ORM yet).
+# When a database is introduced in Phase 3, these become ORM model definitions.
+#
+# Phase 2 models to define:
+#   Bus.js      — { vehicleId, routeId, lat, lon, speed, bearing, updatedAt }
+#   Route.js    — { routeId, name, stops[], distance }
+#   Stop.js     — { stopId, name, lat, lon, routeIds[] }
+#   Trip.js     — { tripId, busId, routeId, scheduledAt, status }

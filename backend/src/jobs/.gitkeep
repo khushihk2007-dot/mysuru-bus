@@ -1,0 +1,12 @@
+# jobs/
+#
+# Background job / cron-task definitions (Phase 4).
+#
+# Planned jobs:
+#   syncBusPositions.js  — polls MITRA every 15 s and updates cache
+#   cleanupSessions.js   — removes expired session data
+#   generateEtaCache.js  — pre-computes ETA for popular routes
+#
+# Job runner options to evaluate:
+#   - node-cron (simple, no Redis needed)
+#   - BullMQ    (Redis-backed, durable, retryable)

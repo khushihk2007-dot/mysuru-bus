@@ -1,0 +1,20 @@
+/**
+ * src/services/README.md
+ *
+ * Service layer — business logic lives here.
+ *
+ * Convention:
+ *  - One file per domain, e.g. busService.js, routeService.js
+ *  - Services call repositories (data layer) and external APIs
+ *  - Controllers call services — never the other way around
+ *  - Services must NEVER import from controllers or routes
+ *
+ * Phase 2 services to create:
+ *  - busService.js      (real-time vehicle positions)
+ *  - routeService.js    (transit routes metadata)
+ *  - stopService.js     (bus stop info)
+ *  - etaService.js      (ETA calculation)
+ *  - searchService.js   (unified search)
+ */
+
+export {};

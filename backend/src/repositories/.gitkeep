@@ -1,0 +1,14 @@
+# repositories/
+#
+# Data-access layer. Each file handles reads/writes for one domain.
+# In Phase 2, these will wrap the MITRA API client (and later, the database).
+#
+# Phase 2 repositories to create:
+#   busRepository.js    — fetches vehicle GPS data from MITRA
+#   routeRepository.js  — fetches route metadata
+#   stopRepository.js   — fetches stop details
+#
+# Convention:
+#   - Repositories return raw data or throw ApiError
+#   - Services transform raw data into domain objects
+#   - Controllers never call repositories directly

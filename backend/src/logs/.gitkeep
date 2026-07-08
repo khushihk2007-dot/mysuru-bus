@@ -1,0 +1,12 @@
+This directory stores log files written by the application.
+
+Files in this directory are gitignored.
+
+Development: logs are written to stdout only (pino-pretty).
+Production:  configure your process manager or log collector (e.g.
+             PM2 log rotation, Fluentd, or Datadog agent) to capture
+             stdout and route it here or to your log aggregation platform.
+
+Future file logging:
+  - Install `pino-roll` for automatic log rotation
+  - Update src/config/logger.js to add a file transport

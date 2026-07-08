@@ -1,0 +1,14 @@
+# cache/
+#
+# In-memory and Redis cache utilities (Phase 4).
+#
+# Planned modules:
+#   memoryCache.js  — lightweight LRU in-process cache (no Redis dep)
+#   redisCache.js   — distributed cache backed by Redis
+#   cacheKeys.js    — all cache key templates in one place
+#   cacheTTL.js     — TTL constants by resource type
+#
+# Cache strategy per resource:
+#   Bus positions   → 15 s TTL (data changes rapidly)
+#   Route metadata  → 5 min TTL (changes rarely)
+#   Stop data       → 1 h TTL  (almost static)

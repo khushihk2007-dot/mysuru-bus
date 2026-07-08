@@ -1,0 +1,12 @@
+# sockets/
+#
+# WebSocket / Socket.IO event handlers (Phase 4).
+#
+# Planned namespaces:
+#   /live  — real-time bus position stream
+#   /eta   — ETA update push notifications
+#
+# Architecture note:
+#   socket.js       — creates and configures the Socket.IO server
+#   handlers/       — one file per event namespace
+#   rooms.js        — room management (subscribe/unsubscribe by route)

@@ -1,0 +1,10 @@
+# helpers/
+#
+# Domain-specific helper functions (thin utilities tightly coupled to
+# the transit domain — distinct from the generic utils/ directory).
+#
+# Phase 2 helpers to create:
+#   etaHelpers.js      — ETA calculation utilities
+#   routeHelpers.js    — polyline decoding, stop ordering
+#   busHelpers.js      — vehicle status normalisation
+#   searchHelpers.js   — query normalisation, fuzzy matching
